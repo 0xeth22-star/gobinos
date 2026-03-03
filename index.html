@@ -521,7 +521,7 @@
       let records = [];
       let offset = '';
       do {
-        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?fields[]=Wallet${offset ? '&offset=' + offset : ''}`;
+      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
         const data = await res.json();
         records = records.concat(data.records || []);
@@ -636,7 +636,7 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          fields: { 'Twitter': twitter, 'Wallet': wallet, 'Submitted At': new Date().toISOString() }
+          fields: { 'Twitter': twitter, 'Wallet': wallet }
         })
       });
 
