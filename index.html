@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gobinos — Allowlist</title>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2a5c2a;
+    --bright: #4ade80;
+    --mud: #111208;
+    --slime: #6b8f3e;
+    --bone: #e8dcc8;
+    --blood: #cc2200;
+    --dark: #0a0a0a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--mud);
+    background-image: radial-gradient(ellipse at 30% 60%, rgba(42,92,42,0.12) 0%, transparent 60%);
+    min-height: 100vh;
+    font-family: 'Space Mono', monospace;
+    color: var(--bone);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(107,143,62,0.25);
+    border-radius: 6px;
+    padding: 40px 36px;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--bright), transparent);
+  }
+
+  .tag {
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    color: var(--slime);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    font-family: 'Creepster', cursive;
+    font-size: 2.8rem;
+    color: var(--bright);
+    letter-spacing: 4px;
+    text-shadow: 0 0 24px rgba(74,222,128,0.3);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .desc {
+    font-size: 0.65rem;
+    color: rgba(232,220,200,0.4);
+    letter-spacing: 1px;
+    line-height: 1.8;
+    margin-bottom: 32px;
+    border-left: 2px solid rgba(107,143,62,0.3);
+    padding-left: 12px;
+  }
+
+  .spots-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(107,143,62,0.15);
+    border-radius: 4px;
+    gap: 16px;
+  }
+
+  .spots-left { flex: 1; }
+
+  .spots-label {
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: var(--slime);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--bright);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .spots-count {
+    font-family: 'Creepster', cursive;
+    font-size: 1.8rem;
+    color: var(--bright);
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  .spots-count.low { color: var(--blood); }
+
+  /* Countdown */
+  .countdown-row {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(107,143,62,0.1);
+    border-radius: 4px;
+  }
+
+  .countdown-label {
+    font-size: 0.5rem;
+    letter-spacing: 3px;
+    color: var(--slime);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .countdown-timer {
+    font-family: 'Creepster', cursive;
+    font-size: 1.6rem;
+    color: var(--bright);
+    letter-spacing: 3px;
+  }
+
+  .countdown-timer.urgent { color: var(--blood); animation: blink 0.8s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--slime);
+    margin-bottom: 8px;
+  }
+
+  .field input {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(107,143,62,0.2);
+    border-radius: 4px;
+    padding: 13px 14px;
+    color: var(--bone);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .field input::placeholder { color: rgba(232,220,200,0.15); }
+  .field input:focus {
+    border-color: rgba(74,222,128,0.5);
+    box-shadow: 0 0 0 2px rgba(74,222,128,0.08);
+  }
+  .field input.err { border-color: rgba(204,34,0,0.6); }
+
+  .err-msg {
+    font-size: 0.55rem;
+    color: var(--blood);
+    letter-spacing: 1px;
+    margin-top: 5px;
+    display: none;
+  }
+  .err-msg.show { display: block; }
+
+  .btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--green);
+    border: 1px solid rgba(74,222,128,0.4);
+    border-radius: 4px;
+    color: var(--bone);
+    font-family: 'Creepster', cursive;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  .btn:hover { background: rgba(42,92,42,0.9); box-shadow: 0 0 16px rgba(74,222,128,0.2); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+  .fine-print {
+    margin-top: 16px;
+    font-size: 0.5rem;
+    color: rgba(232,220,200,0.2);
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 2;
+  }
+
+  .alt-screen { display: none; text-align: center; padding: 20px 0; }
+  .alt-screen.show { display: block; }
+
+  .alt-title {
+    font-family: 'Creepster', cursive;
+    font-size: 2.2rem;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+
+  .alt-sub {
+    font-size: 0.62rem;
+    color: rgba(232,220,200,0.4);
+    letter-spacing: 2px;
+    line-height: 2;
+  }
+
+  #successScreen .alt-title { color: var(--bright); }
+  #closedScreen .alt-title { color: var(--blood); }
+
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--dark);
+    border: 1px solid var(--slime);
+    border-radius: 4px;
+    padding: 12px 24px;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.err-toast { border-color: var(--blood); color: #ff6b6b; }
+
+  /* ---- ADMIN PANEL ---- */
+  .admin-toggle {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(107,143,62,0.2);
+    border-radius: 4px;
+    padding: 8px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 2px;
+    color: rgba(107,143,62,0.5);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .admin-toggle:hover { color: var(--slime); }
+
+  .admin-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .admin-overlay.show { display: flex; }
+
+  .admin-card {
+    background: #0d0d0d;
+    border: 1px solid rgba(107,143,62,0.3);
+    border-radius: 6px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+  }
+
+  .admin-title {
+    font-family: 'Creepster', cursive;
+    font-size: 1.4rem;
+    color: var(--slime);
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+
+  .admin-field { margin-bottom: 16px; }
+
+  .admin-field label {
+    display: block;
+    font-size: 0.5rem;
+    letter-spacing: 3px;
+    color: var(--slime);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .admin-field input {
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(107,143,62,0.2);
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: var(--bone);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    outline: none;
+  }
+  .admin-field input:focus { border-color: rgba(74,222,128,0.4); }
+
+  .admin-field input[type="password"] { letter-spacing: 2px; }
+
+  .admin-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--green);
+    border: 1px solid rgba(74,222,128,0.3);
+    border-radius: 4px;
+    color: var(--bone);
+    font-family: 'Creepster', cursive;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+  .admin-btn:hover { box-shadow: 0 0 12px rgba(74,222,128,0.2); }
+
+  .admin-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: rgba(232,220,200,0.3);
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .admin-note {
+    font-size: 0.5rem;
+    color: rgba(232,220,200,0.2);
+    letter-spacing: 1px;
+    margin-top: 12px;
+    line-height: 1.8;
+  }
+
+  .admin-status {
+    font-size: 0.55rem;
+    margin-top: 10px;
+    letter-spacing: 1px;
+    color: var(--bright);
+    display: none;
+  }
+  .admin-status.show { display: block; }
+  .admin-status.err { color: var(--blood); }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Main form -->
+  <div id="formScreen">
+    <div class="tag">gobinos on eth — allowlist</div>
+    <div class="title">GOBINOS</div>
+    <div class="desc">
+      ugly goblins. eth trenches.<br>
+      grab a spot before they're gone.
+    </div>
+
+    <div id="countdownRow" class="countdown-row" style="display:none">
+      <div class="countdown-label">closes in</div>
+      <div class="countdown-timer" id="countdown">--:--:--</div>
+    </div>
+
+    <div class="spots-row">
+      <div class="spots-left">
+        <div class="spots-label">spots left</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width:100%"></div>
+        </div>
+      </div>
+      <div class="spots-count" id="spotsCount">--</div>
+    </div>
+
+    <div class="field">
+      <label>X handle</label>
+      <input type="text" id="twitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
+      <div class="err-msg" id="twitterErr">need your handle</div>
+    </div>
+
+    <div class="field">
+      <label>EVM wallet</label>
+      <input type="text" id="wallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
+      <div class="err-msg" id="walletErr">enter a valid wallet</div>
+    </div>
+
+    <button class="btn" id="submitBtn" onclick="handleSubmit()">Enter the Trenches</button>
+
+    <div class="fine-print">
+      one wallet per entry<br>
+      collab requests go to @Amordeev
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="alt-screen" id="successScreen">
+    <div class="alt-title">you're in</div>
+    <div class="alt-sub">
+      locked in.<br>
+      follow @gobinosoneth for what's next.<br>
+      ngmi if u jeet.
+    </div>
+  </div>
+
+  <!-- Closed by spots -->
+  <div class="alt-screen" id="closedScreen">
+    <div class="alt-title">spots gone</div>
+    <div class="alt-sub">
+      all filled up.<br>
+      follow @gobinosoneth — more coming.
+    </div>
+  </div>
+
+  <!-- Closed by time -->
+  <div class="alt-screen" id="expiredScreen">
+    <div class="alt-title">closed</div>
+    <div class="alt-sub">
+      window's shut.<br>
+      follow @gobinosoneth for the next one.
+    </div>
+  </div>
+
+</div>
+
+<!-- Admin toggle -->
+<button class="admin-toggle" onclick="openAdmin()">admin</button>
+
+<!-- Admin overlay -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-card">
+    <button class="admin-close" onclick="closeAdmin()">x</button>
+    <div class="admin-title">ADMIN PANEL</div>
+
+    <div id="adminLogin">
+      <div class="admin-field">
+        <label>password</label>
+        <input type="password" id="adminPass" placeholder="enter password" onkeydown="if(event.key==='Enter')checkPass()">
+      </div>
+      <button class="admin-btn" onclick="checkPass()">unlock</button>
+      <div class="admin-status err" id="passErr">wrong password</div>
+    </div>
+
+    <div id="adminControls" style="display:none">
+      <div class="admin-field">
+        <label>total spots</label>
+        <input type="number" id="adminSpots" min="1" max="10000" placeholder="e.g. 100">
+      </div>
+      <div class="admin-field">
+        <label>deadline (leave blank = no timer)</label>
+        <input type="datetime-local" id="adminDeadline">
+      </div>
+      <button class="admin-btn" onclick="saveAdmin()">save + apply</button>
+      <div class="admin-status" id="adminStatus"></div>
+      <div class="admin-note">
+        changes apply instantly.<br>
+        deadline is your local timezone.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ==========================================
+  // CONFIG
+  // ==========================================
+  const AIRTABLE_API_KEY = 'patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
+  const AIRTABLE_BASE_ID = 'appRp0o1yWMEMrhbO';
+  const AIRTABLE_TABLE   = 'Allowlist';
+  const ADMIN_PASSWORD   = 'gobinos2024'; // change this
+  // ==========================================
+
+  let maxSpots    = parseInt(localStorage.getItem('gob_max') || '100');
+  let deadline    = localStorage.getItem('gob_deadline') || '';
+  let currentSpots = maxSpots;
+  let timerInterval;
+
+  // --- Init ---
+  async function init() {
+    await fetchSpotCount();
+    startCountdown();
+  }
+
+  async function fetchSpotCount() {
+    try {
+      let records = [];
+      let offset = '';
+      do {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?fields[]=Wallet${offset ? '&offset=' + offset : ''}`;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
+        const data = await res.json();
+        records = records.concat(data.records || []);
+        offset = data.offset || '';
+      } while (offset);
+
+      currentSpots = Math.max(0, maxSpots - records.length);
+      updateSpotsUI();
+      if (currentSpots === 0) showScreen('closedScreen');
+    } catch(e) {
+      updateSpotsUI();
+    }
+  }
+
+  function updateSpotsUI() {
+    const el = document.getElementById('spotsCount');
+    const fill = document.getElementById('progressFill');
+    el.textContent = currentSpots;
+    fill.style.width = (currentSpots / maxSpots * 100) + '%';
+    if (currentSpots <= Math.ceil(maxSpots * 0.1)) {
+      el.classList.add('low');
+      fill.style.background = '#cc2200';
+    } else {
+      el.classList.remove('low');
+      fill.style.background = '';
+    }
+  }
+
+  function startCountdown() {
+    if (timerInterval) clearInterval(timerInterval);
+    if (!deadline) {
+      document.getElementById('countdownRow').style.display = 'none';
+      return;
+    }
+    document.getElementById('countdownRow').style.display = 'block';
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    if (!deadline) return;
+    const diff = new Date(deadline) - new Date();
+    const el = document.getElementById('countdown');
+    if (diff <= 0) {
+      el.textContent = 'CLOSED';
+      clearInterval(timerInterval);
+      showScreen('expiredScreen');
+      return;
+    }
+    const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+    el.textContent = `${h}:${m}:${s}`;
+    if (diff < 3600000) el.classList.add('urgent');
+  }
+
+  function showScreen(id) {
+    document.getElementById('formScreen').style.display = 'none';
+    ['successScreen','closedScreen','expiredScreen'].forEach(s => {
+      document.getElementById(s).classList.remove('show');
+    });
+    document.getElementById(id).classList.add('show');
+  }
+
+  // --- Form ---
+  function showToast(msg, isErr) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isErr ? ' err-toast' : '');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  function isValidWallet(w) { return /^0x[a-fA-F0-9]{40}$/.test(w); }
+  function hasSubmitted(w) { return localStorage.getItem('gob_' + w.toLowerCase()) === '1'; }
+  function markSubmitted(w) { localStorage.setItem('gob_' + w.toLowerCase(), '1'); }
+
+  async function handleSubmit() {
+    document.querySelectorAll('.err-msg').forEach(e => e.classList.remove('show'));
+    document.querySelectorAll('.field input').forEach(i => i.classList.remove('err'));
+
+    // check deadline
+    if (deadline && new Date(deadline) < new Date()) { showScreen('expiredScreen'); return; }
+    if (currentSpots <= 0) { showScreen('closedScreen'); return; }
+
+    const twitter = document.getElementById('twitter').value.trim();
+    const wallet  = document.getElementById('wallet').value.trim();
+    let ok = true;
+
+    if (!twitter) {
+      document.getElementById('twitterErr').classList.add('show');
+      document.getElementById('twitter').classList.add('err');
+      ok = false;
+    }
+    if (!isValidWallet(wallet)) {
+      document.getElementById('walletErr').classList.add('show');
+      document.getElementById('wallet').classList.add('err');
+      ok = false;
+    }
+    if (!ok) return;
+
+    if (hasSubmitted(wallet)) { showToast('wallet already submitted', true); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'locking in...';
+
+    try {
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fields: { 'Twitter': twitter, 'Wallet': wallet, 'Submitted At': new Date().toISOString() }
+        })
+      });
+
+      if (!res.ok) throw new Error();
+      markSubmitted(wallet);
+      currentSpots--;
+      showScreen('successScreen');
+
+    } catch(e) {
+      showToast('something broke. try again.', true);
+      btn.disabled = false;
+      btn.textContent = 'Enter the Trenches';
+    }
+  }
+
+  // --- Admin ---
+  function openAdmin() { document.getElementById('adminOverlay').classList.add('show'); }
+  function closeAdmin() {
+    document.getElementById('adminOverlay').classList.remove('show');
+    document.getElementById('adminLogin').style.display = 'block';
+    document.getElementById('adminControls').style.display = 'none';
+    document.getElementById('adminPass').value = '';
+    document.getElementById('passErr').classList.remove('show');
+  }
+
+  function checkPass() {
+    const p = document.getElementById('adminPass').value;
+    if (p === ADMIN_PASSWORD) {
+      document.getElementById('adminLogin').style.display = 'none';
+      document.getElementById('adminControls').style.display = 'block';
+      document.getElementById('adminSpots').value = maxSpots;
+      document.getElementById('adminDeadline').value = deadline;
+    } else {
+      document.getElementById('passErr').classList.add('show');
+    }
+  }
+
+  function saveAdmin() {
+    const spots = parseInt(document.getElementById('adminSpots').value);
+    const dl    = document.getElementById('adminDeadline').value;
+
+    if (!spots || spots < 1) {
+      showAdminStatus('enter a valid spot count', true);
+      return;
+    }
+
+    maxSpots = spots;
+    deadline = dl;
+    localStorage.setItem('gob_max', maxSpots);
+    localStorage.setItem('gob_deadline', deadline);
+
+    fetchSpotCount();
+    startCountdown();
+    showAdminStatus('saved.', false);
+    setTimeout(closeAdmin, 1200);
+  }
+
+  function showAdminStatus(msg, isErr) {
+    const el = document.getElementById('adminStatus');
+    el.textContent = msg;
+    el.className = 'admin-status show' + (isErr ? ' err' : '');
+  }
+
+  init();
+</script>
+</body>
+</html>
