@@ -378,12 +378,12 @@
 <div class="card">
 
   <!-- Main form -->
-  <div id="formScreen">
-    <div class="tag">gobinos on eth</div>
+  <div id="formScreen" style="display:none">
+
     <div class="title">GOBINOS</div>
     <div class="desc">
-      ugly goblins. eth trenches.<br>
-      grab a spot before they're gone.
+      just bunch of ugly goblins in the eth trenches<br>
+      if u jeet u ngmi
     </div>
 
     <div id="countdownRow" class="countdown-row" style="display:none">
@@ -418,6 +418,8 @@
     <div class="fine-print">
       one wallet per entry &nbsp;·&nbsp;
       <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a>
+      &nbsp;·&nbsp;
+      <span onclick="openChecker()" style="color:rgba(107,143,62,0.6);cursor:pointer;">check my spot</span>
     </div>
   </div>
 
@@ -431,12 +433,26 @@
     </div>
   </div>
 
-  <!-- Closed by spots -->
-  <div class="alt-screen" id="closedScreen">
+  <!-- Checker -->
+  <div class="alt-screen" id="checkerScreen">
+    <div style="text-align:left;padding:4px 0">
+      <div class="tag" style="margin-bottom:20px">check your spot</div>
+      <div class="field">
+        <label>your wallet</label>
+        <input type="text" id="checkWallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
+        <div class="err-msg" id="checkErr">enter a valid wallet</div>
+      </div>
+      <button class="btn" onclick="checkWallet()">check</button>
+      <div id="checkResult" style="margin-top:16px;font-size:0.65rem;letter-spacing:2px;text-align:center;display:none"></div>
+      <div style="margin-top:20px;text-align:center">
+        <span onclick="showFormOrClosed()" style="font-size:0.55rem;letter-spacing:2px;color:rgba(107,143,62,0.5);cursor:pointer;text-transform:uppercase;">back</span>
+      </div>
+    </div>
+  </div>
     <div class="alt-title">spots gone</div>
     <div class="alt-sub">
       all filled up.<br>
-      follow @gobinosoneth — more coming.
+      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a> — more coming.
     </div>
   </div>
 
@@ -445,7 +461,7 @@
     <div class="alt-title">closed</div>
     <div class="alt-sub">
       window's shut.<br>
-      follow @gobinosoneth for the next one.
+      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a> for the next one.
     </div>
   </div>
 
@@ -509,8 +525,17 @@
 
   // --- Init ---
   async function init() {
+    // check deadline immediately before fetch to avoid flash
+    if (deadline && new Date(deadline) < new Date()) {
+      showScreen('expiredScreen');
+      return;
+    }
     await fetchSpotCount();
     startCountdown();
+    // only show form if not closed
+    if (currentSpots > 0) {
+      document.getElementById('formScreen').style.display = 'block';
+    }
   }
 
   async function fetchSpotCount() {
@@ -577,10 +602,70 @@
 
   function showScreen(id) {
     document.getElementById('formScreen').style.display = 'none';
-    ['successScreen','closedScreen','expiredScreen'].forEach(s => {
+    ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
       document.getElementById(s).classList.remove('show');
     });
     document.getElementById(id).classList.add('show');
+  }
+
+  function openChecker() {
+    document.getElementById('formScreen').style.display = 'none';
+    ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
+      document.getElementById(s).classList.remove('show');
+    });
+    document.getElementById('checkerScreen').classList.add('show');
+    document.getElementById('checkWallet').value = '';
+    document.getElementById('checkResult').style.display = 'none';
+    document.getElementById('checkErr').classList.remove('show');
+  }
+
+  function showFormOrClosed() {
+    if (currentSpots > 0 && !(deadline && new Date(deadline) < new Date())) {
+      ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
+        document.getElementById(s).classList.remove('show');
+      });
+      document.getElementById('formScreen').style.display = 'block';
+    } else {
+      showScreen('closedScreen');
+    }
+  }
+
+  async function checkWallet() {
+    const w = document.getElementById('checkWallet').value.trim();
+    const resultEl = document.getElementById('checkResult');
+    document.getElementById('checkErr').classList.remove('show');
+    resultEl.style.display = 'none';
+
+    if (!isValidWallet(w)) {
+      document.getElementById('checkErr').classList.add('show');
+      return;
+    }
+
+    const btn = document.querySelector('#checkerScreen .btn');
+    btn.disabled = true;
+    btn.textContent = 'checking...';
+
+    try {
+      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?filterByFormula={Wallet}="${w}"`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
+      const data = await res.json();
+
+      resultEl.style.display = 'block';
+      if (data.records && data.records.length > 0) {
+        resultEl.style.color = 'var(--bright)';
+        resultEl.textContent = 'ur in goblin';
+      } else {
+        resultEl.style.color = 'var(--blood)';
+        resultEl.textContent = 'ngmi ser';
+      }
+    } catch(e) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = 'var(--blood)';
+      resultEl.textContent = 'something broke. try again.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'check';
   }
 
   // --- Form ---
