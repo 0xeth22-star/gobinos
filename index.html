@@ -375,7 +375,7 @@
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="mainCard" style="opacity:0;transition:opacity 0.2s">
 
   <!-- Main form -->
   <div id="formScreen" style="display:none">
@@ -425,9 +425,7 @@
   <div class="alt-screen" id="successScreen">
     <div class="alt-title">you're in</div>
     <div class="alt-sub">
-      locked in.<br>
-      follow @gobinosoneth for what's next.<br>
-      ngmi if u jeet.
+      ngmi if u jeet
     </div>
   </div>
 
@@ -526,17 +524,17 @@
 
   // --- Init ---
   async function init() {
-    // check deadline immediately before fetch to avoid flash
     if (deadline && new Date(deadline) < new Date()) {
       showScreen('expiredScreen');
+      document.getElementById('mainCard').style.opacity = '1';
       return;
     }
     await fetchSpotCount();
     startCountdown();
-    // only show form if not closed
     if (currentSpots > 0) {
       document.getElementById('formScreen').style.display = 'block';
     }
+    document.getElementById('mainCard').style.opacity = '1';
   }
 
   async function fetchSpotCount() {
