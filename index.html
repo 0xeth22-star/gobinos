@@ -262,18 +262,13 @@
     position: fixed;
     bottom: 16px;
     right: 16px;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid rgba(107,143,62,0.2);
-    border-radius: 4px;
-    padding: 8px 14px;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 2px;
-    color: rgba(107,143,62,0.5);
-    cursor: pointer;
-    text-transform: uppercase;
+    background: transparent;
+    border: none;
+    width: 20px;
+    height: 20px;
+    cursor: default;
+    opacity: 0;
   }
-  .admin-toggle:hover { color: var(--slime); }
 
   .admin-overlay {
     display: none;
@@ -456,8 +451,8 @@
 
 </div>
 
-<!-- Admin toggle -->
-<button class="admin-toggle" onclick="openAdmin()">admin</button>
+<!-- Admin toggle: press Shift+G+G to open -->
+<button class="admin-toggle" onclick="openAdmin()"></button>
 
 <!-- Admin overlay -->
 <div class="admin-overlay" id="adminOverlay">
@@ -653,6 +648,17 @@
       btn.textContent = 'Enter the Trenches';
     }
   }
+
+  // open admin with Shift+G+G
+  let gCount = 0, gTimer;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'G' && e.shiftKey) {
+      gCount++;
+      clearTimeout(gTimer);
+      gTimer = setTimeout(() => gCount = 0, 800);
+      if (gCount >= 2) { gCount = 0; openAdmin(); }
+    }
+  });
 
   // --- Admin ---
   function openAdmin() { document.getElementById('adminOverlay').classList.add('show'); }
