@@ -421,8 +421,8 @@
     <button class="btn" id="submitBtn" onclick="handleSubmit()">Enter the Trenches</button>
 
     <div class="fine-print">
-      one wallet per entry<br>
-      collab requests go to @Amordeev
+      one wallet per entry &nbsp;·&nbsp;
+      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a>
     </div>
   </div>
 
@@ -484,6 +484,8 @@
         <input type="datetime-local" id="adminDeadline">
       </div>
       <button class="admin-btn" onclick="saveAdmin()">save + apply</button>
+      <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="exportWallets()">export wallets</button>
+      <button class="admin-btn" style="margin-top:8px;background:rgba(100,0,0,0.4);border-color:rgba(204,34,0,0.4);font-size:0.85rem;" onclick="clearPhase()">clear phase</button>
       <div class="admin-status" id="adminStatus"></div>
       <div class="admin-note">
         changes apply instantly.<br>
@@ -692,6 +694,66 @@
     startCountdown();
     showAdminStatus('saved.', false);
     setTimeout(closeAdmin, 1200);
+  }
+
+  async function exportWallets() {
+    showAdminStatus('fetching wallets...', false);
+    try {
+      let records = [];
+      let offset = '';
+      do {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
+        const data = await res.json();
+        records = records.concat(data.records || []);
+        offset = data.offset || '';
+      } while (offset);
+
+      const wallets = records
+        .map(r => r.fields.Wallet)
+        .filter(Boolean)
+        .join('\n');
+
+      const blob = new Blob([wallets], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'gobinos-wallets.txt';
+      a.click();
+      showAdminStatus(`exported ${records.length} wallets`, false);
+    } catch(e) {
+      showAdminStatus('export failed', true);
+    }
+  }
+
+  async function clearPhase() {
+    if (!confirm('delete all records? this cannot be undone.')) return;
+    showAdminStatus('clearing...', false);
+    try {
+      let records = [];
+      let offset = '';
+      do {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
+        const data = await res.json();
+        records = records.concat(data.records || []);
+        offset = data.offset || '';
+      } while (offset);
+
+      // delete in batches of 10
+      for (let i = 0; i < records.length; i += 10) {
+        const batch = records.slice(i, i + 10).map(r => r.id);
+        const params = batch.map(id => `records[]=${id}`).join('&');
+        await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?${params}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+        });
+      }
+
+      await fetchSpotCount();
+      showAdminStatus('phase cleared.', false);
+    } catch(e) {
+      showAdminStatus('clear failed', true);
+    }
   }
 
   function showAdminStatus(msg, isErr) {
