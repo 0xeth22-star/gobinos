@@ -417,7 +417,7 @@
 
     <div class="fine-print">
       one wallet per entry<br>
-      <span onclick="openChecker()" style="color:rgba(107,143,62,0.8);cursor:pointer;font-size:0.6rem;letter-spacing:2px;border-bottom:1px solid rgba(107,143,62,0.3);">check my spot</span>
+      <span id="checkerLink" onclick="openChecker()" style="color:var(--bright);cursor:pointer;font-size:0.65rem;letter-spacing:2px;border-bottom:1px solid rgba(74,222,128,0.4);display:none">check my spot</span>
     </div>
   </div>
 
@@ -493,6 +493,10 @@
         <label>deadline (leave blank = no timer)</label>
         <input type="datetime-local" id="adminDeadline">
       </div>
+      <div class="admin-field">
+        <label>checker</label>
+        <button class="admin-btn" id="checkerToggleBtn" onclick="toggleChecker()" style="font-size:0.85rem;margin-top:0"></button>
+      </div>
       <button class="admin-btn" onclick="saveAdmin()">save + apply</button>
       <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="exportWallets()">export wallets</button>
       <button class="admin-btn" style="margin-top:8px;background:rgba(100,0,0,0.4);border-color:rgba(204,34,0,0.4);font-size:0.85rem;" onclick="clearPhase()">clear phase</button>
@@ -513,8 +517,9 @@
   // ==========================================
   const AIRTABLE_API_KEY = 'patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
   const AIRTABLE_BASE_ID = 'appRp0o1yWMEMrhbO';
-  const AIRTABLE_TABLE   = 'tblJTJZVtJS57rkGt';
-  const ADMIN_PASSWORD   = 'gobinos2024'; // change this
+  const AIRTABLE_TABLE   = 'tblJTJZVtJS57rkGt'; // Allowlist — cleared each phase
+  const MASTERLIST       = 'tblP9izXvEOZj29Gz'; // Masterlist — never cleared
+  const ADMIN_PASSWORD   = 'gobinos2024';
   // ==========================================
 
   let maxSpots    = parseInt(localStorage.getItem('gob_max') || '100');
@@ -534,6 +539,7 @@
     if (currentSpots > 0) {
       document.getElementById('formScreen').style.display = 'block';
     }
+    applyCheckerState();
     document.getElementById('mainCard').style.opacity = '1';
   }
 
@@ -554,6 +560,8 @@
       if (currentSpots === 0) showScreen('closedScreen');
     } catch(e) {
       updateSpotsUI();
+      document.getElementById('formScreen').style.display = 'block';
+      document.getElementById('mainCard').style.opacity = '1';
     }
   }
 
@@ -645,7 +653,7 @@
     btn.textContent = 'checking...';
 
     try {
-      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?filterByFormula={Wallet}="${w}"`;
+      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MASTERLIST}?filterByFormula={Wallet}="${w}"`;
       const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
       const data = await res.json();
 
@@ -710,18 +718,18 @@
     btn.textContent = 'locking in...';
 
     try {
-      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}`, {
+      const post = (table) => fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${table}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          fields: { 'Twitter': twitter, 'Wallet': wallet }
-        })
+        body: JSON.stringify({ fields: { 'Twitter': twitter, 'Wallet': wallet } })
       });
 
+      const res = await post(AIRTABLE_TABLE);
       if (!res.ok) throw new Error();
+      await post(MASTERLIST); // also write to masterlist silently
       markSubmitted(wallet);
       currentSpots--;
       showScreen('successScreen');
@@ -731,6 +739,22 @@
       btn.disabled = false;
       btn.textContent = 'Enter the Trenches';
     }
+  }
+
+  let checkerEnabled = localStorage.getItem('gob_checker') === '1';
+
+  function applyCheckerState() {
+    const link = document.getElementById('checkerLink');
+    if (link) link.style.display = checkerEnabled ? 'inline' : 'none';
+    const btn = document.getElementById('checkerToggleBtn');
+    if (btn) btn.textContent = checkerEnabled ? 'checker: on' : 'checker: off';
+  }
+
+  function toggleChecker() {
+    checkerEnabled = !checkerEnabled;
+    localStorage.setItem('gob_checker', checkerEnabled ? '1' : '0');
+    applyCheckerState();
+    showAdminStatus(checkerEnabled ? 'checker enabled' : 'checker hidden', false);
   }
 
   // open admin with Shift+G+G
@@ -761,6 +785,7 @@
       document.getElementById('adminControls').style.display = 'block';
       document.getElementById('adminSpots').value = maxSpots;
       document.getElementById('adminDeadline').value = deadline;
+      applyCheckerState();
     } else {
       document.getElementById('passErr').classList.add('show');
     }
