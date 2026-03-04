@@ -535,12 +535,23 @@
 
   // --- Init ---
   async function init() {
+    // fallback timeout — show form after 5s no matter what
+    const fallback = setTimeout(() => {
+      if (document.getElementById('mainCard').style.opacity !== '1') {
+        document.getElementById('formScreen').style.display = 'block';
+        applyCheckerState();
+        document.getElementById('mainCard').style.opacity = '1';
+      }
+    }, 5000);
+
     if (deadline && new Date(deadline) < new Date()) {
+      clearTimeout(fallback);
       showScreen('expiredScreen');
       document.getElementById('mainCard').style.opacity = '1';
       return;
     }
     await fetchSpotCount();
+    clearTimeout(fallback);
     startCountdown();
     if (currentSpots > 0) {
       document.getElementById('formScreen').style.display = 'block';
