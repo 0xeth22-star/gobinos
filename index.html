@@ -401,8 +401,12 @@
       <div class="spots-count" id="spotsCount">--</div>
     </div>
 
+    <div style="margin-bottom:20px;padding:12px 14px;background:rgba(0,0,0,0.3);border-left:2px solid rgba(74,222,128,0.4);border-radius:2px;">
+      <div style="font-size:0.7rem;letter-spacing:1px;color:var(--bone);opacity:0.6;">follow <a href="https://x.com/gobinosoneth" target="_blank" style="color:var(--bright);text-decoration:none;">@gobinosoneth</a> to qualify</div>
+    </div>
+
     <div class="field">
-      <div style="font-size:0.55rem;margin-bottom:8px;letter-spacing:1px;color:var(--slime);">follow <a href="https://x.com/gobinosoneth" target="_blank" style="color:var(--bright);text-decoration:none;">@gobinosoneth</a> then drop your handle</div>
+      <label>drop your handle</label>
       <input type="text" id="twitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
       <div class="err-msg" id="twitterErr">need your handle</div>
     </div>
@@ -524,26 +528,63 @@
   // ==========================================
   const AIRTABLE_API_KEY = 'patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
   const AIRTABLE_BASE_ID = 'appRp0o1yWMEMrhbO';
-  const AIRTABLE_TABLE   = 'tblJTJZVtJS57rkGt'; // Allowlist — cleared each phase
-  const MASTERLIST       = 'tblP9izXvEOZj29Gz'; // Masterlist — never cleared
+  const AIRTABLE_TABLE   = 'tblJTJZVtJS57rkGt';
+  const MASTERLIST       = 'tblP9izXvEOZj29Gz';
+  const CONFIG_TABLE     = 'tblAMYHI1S6OTihNO';
   const ADMIN_PASSWORD   = 'gobinos2024';
   // ==========================================
 
-  let maxSpots    = parseInt(localStorage.getItem('gob_max') || '100');
-  let deadline    = localStorage.getItem('gob_deadline') || '';
+  let maxSpots    = 100;
+  let deadline    = '';
   let currentSpots = maxSpots;
+  let configRecordId = null;
   let timerInterval;
+
+  async function loadConfig() {
+    try {
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}`, {
+        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+      });
+      const data = await res.json();
+      if (data.records && data.records.length > 0) {
+        const r = data.records[0];
+        configRecordId = r.id;
+        maxSpots = parseInt(r.fields.Spots || '100');
+        deadline = r.fields.Deadline || '';
+      }
+    } catch(e) {}
+  }
+
+  async function saveConfig() {
+    const body = { fields: { Spots: String(maxSpots), Deadline: deadline } };
+    if (configRecordId) {
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}/${configRecordId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      configRecordId = data.id;
+    }
+  }
 
   // --- Init ---
   async function init() {
-    // fallback timeout — show form after 5s no matter what
     const fallback = setTimeout(() => {
       if (document.getElementById('mainCard').style.opacity !== '1') {
         document.getElementById('formScreen').style.display = 'block';
         applyCheckerState();
         document.getElementById('mainCard').style.opacity = '1';
       }
-    }, 5000);
+    }, 6000);
+
+    await loadConfig();
 
     if (deadline && new Date(deadline) < new Date()) {
       clearTimeout(fallback);
@@ -811,7 +852,7 @@
     }
   }
 
-  function saveAdmin() {
+  async function saveAdmin() {
     const spots = parseInt(document.getElementById('adminSpots').value);
     const dl    = document.getElementById('adminDeadline').value;
 
@@ -822,9 +863,9 @@
 
     maxSpots = spots;
     deadline = dl;
-    localStorage.setItem('gob_max', maxSpots);
-    localStorage.setItem('gob_deadline', deadline);
 
+    showAdminStatus('saving...', false);
+    await saveConfig();
     fetchSpotCount();
     startCountdown();
     showAdminStatus('saved.', false);
