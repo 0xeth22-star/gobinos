@@ -380,7 +380,7 @@
   <!-- Main form -->
   <div id="formScreen" style="display:none">
 
-    <div class="title">GOBINOS</div>
+    <div class="title" id="gobTitle">GOBINOS</div>
     <div class="desc">
       just bunch of ugly goblins in the eth trenches<br>
       if u jeet u ngmi
@@ -464,8 +464,7 @@
   <div class="alt-screen" id="expiredScreen">
     <div class="alt-title">closed</div>
     <div class="alt-sub">
-      window shut<br>
-      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a> for the next one
+      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a>
     </div>
     <div style="margin-top:20px">
       <span id="checkerLinkExpired" onclick="openChecker()" style="color:var(--bright);cursor:pointer;font-size:0.65rem;letter-spacing:2px;border-bottom:1px solid rgba(74,222,128,0.4);display:none">check my spot</span>
@@ -507,6 +506,8 @@
       </div>
       <button class="admin-btn" onclick="saveAdmin()">save + apply</button>
       <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="exportWallets()">export wallets</button>
+      <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="document.getElementById('importFile').click()">import wallets</button>
+      <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importWallets(this)">
       <button class="admin-btn" style="margin-top:8px;background:rgba(100,0,0,0.4);border-color:rgba(204,34,0,0.4);font-size:0.85rem;" onclick="clearPhase()">clear phase</button>
       <div class="admin-status" id="adminStatus"></div>
       <div class="admin-note">
@@ -816,6 +817,15 @@
     showAdminStatus(checkerEnabled ? 'checker enabled' : 'checker hidden', false);
   }
 
+  // triple tap GOBINOS title to open admin on mobile
+  let tapCount = 0, tapTimer;
+  document.getElementById('gobTitle').addEventListener('click', () => {
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => tapCount = 0, 600);
+    if (tapCount >= 3) { tapCount = 0; openAdmin(); }
+  });
+
   // open admin with Shift+G+G
   let gCount = 0, gTimer;
   document.addEventListener('keydown', e => {
@@ -868,6 +878,36 @@
     startCountdown();
     showAdminStatus('saved.', false);
     setTimeout(() => { closeAdmin(); location.reload(); }, 1000);
+  }
+
+  async function importWallets(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const wallets = text.split('\n').map(w => w.trim()).filter(w => /^0x[a-fA-F0-9]{40}$/.test(w));
+    if (wallets.length === 0) { showAdminStatus('no valid wallets found', true); return; }
+
+    showAdminStatus(`importing ${wallets.length} wallets...`, false);
+
+    const post = async (table, wallet) => {
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${table}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { Twitter: 'collab', Wallet: wallet } })
+      });
+    };
+
+    let done = 0;
+    for (const wallet of wallets) {
+      await post(AIRTABLE_TABLE, wallet);
+      await post(MASTERLIST, wallet);
+      done++;
+      if (done % 5 === 0) showAdminStatus(`importing... ${done}/${wallets.length}`, false);
+    }
+
+    await fetchSpotCount();
+    showAdminStatus(`imported ${wallets.length} wallets`, false);
+    input.value = '';
   }
 
   async function exportWallets() {
