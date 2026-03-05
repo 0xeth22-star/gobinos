@@ -401,8 +401,9 @@
       <div class="spots-count" id="spotsCount">--</div>
     </div>
 
-    <div style="margin-bottom:20px;padding:12px 14px;background:rgba(0,0,0,0.3);border-left:2px solid rgba(74,222,128,0.4);border-radius:2px;">
-      <div style="font-size:0.7rem;letter-spacing:1px;color:var(--bone);opacity:0.6;">follow <a href="https://x.com/gobinosoneth" target="_blank" style="color:var(--bright);text-decoration:none;">@gobinosoneth</a> to qualify</div>
+    <div class="field">
+      <label>follow</label>
+      <a href="https://x.com/gobinosoneth" target="_blank" style="display:block;width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:13px 14px;color:var(--bright);font-family:'Space Mono',monospace;font-size:0.8rem;text-decoration:none;letter-spacing:1px;">@gobinosoneth</a>
     </div>
 
     <div class="field">
@@ -551,12 +552,13 @@
         configRecordId = r.id;
         maxSpots = parseInt(r.fields.Spots || '100');
         deadline = r.fields.Deadline || '';
+        checkerEnabled = r.fields.Checker === '1';
       }
     } catch(e) {}
   }
 
   async function saveConfig() {
-    const body = { fields: { Spots: String(maxSpots), Deadline: deadline } };
+    const body = { fields: { Spots: String(maxSpots), Deadline: deadline, Checker: checkerEnabled ? '1' : '0' } };
     if (configRecordId) {
       await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}/${configRecordId}`, {
         method: 'PATCH',
@@ -800,7 +802,7 @@
     }
   }
 
-  let checkerEnabled = localStorage.getItem('gob_checker') === '1';
+  let checkerEnabled = false;
 
   function applyCheckerState() {
     ['checkerLink','checkerLinkClosed','checkerLinkExpired'].forEach(id => {
@@ -813,8 +815,8 @@
 
   function toggleChecker() {
     checkerEnabled = !checkerEnabled;
-    localStorage.setItem('gob_checker', checkerEnabled ? '1' : '0');
     applyCheckerState();
+    saveConfig();
     showAdminStatus(checkerEnabled ? 'checker enabled' : 'checker hidden', false);
   }
 
