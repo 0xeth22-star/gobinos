@@ -423,9 +423,9 @@
 
   <!-- Success -->
   <div class="alt-screen" id="successScreen">
-    <div class="alt-title">you're in</div>
+    <div class="alt-title">stay locked in</div>
     <div class="alt-sub">
-      ngmi if u jeet
+      follow <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a> & drop your X handle
     </div>
   </div>
 
@@ -827,7 +827,7 @@
     fetchSpotCount();
     startCountdown();
     showAdminStatus('saved.', false);
-    setTimeout(closeAdmin, 1200);
+    setTimeout(() => { closeAdmin(); location.reload(); }, 1000);
   }
 
   async function exportWallets() {
