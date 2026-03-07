@@ -58,7 +58,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0a0d07; displ
   <!-- Win -->
   <div class="overlay" id="winScreen" style="display:none">
     <div class="card">
-      <div class="o-title">gm goblin</div>
+      <div class="o-title">gm goblin</div><div class="o-sub" style="margin-bottom:4px;font-size:.5rem;color:rgba(74,222,128,.5);">WIN SCORE (admin)</div><input class="o-input" id="scoreInput" value="500" style="margin-bottom:16px;font-size:.7rem;" oninput="WIN_SCORE=parseInt(this.value)||500">
       <div class="o-sub">500 kills. you earned it.<br>drop your wallet — goblist locked</div>
       <input class="o-input" id="winWallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
       <input class="o-input" id="winTwitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
@@ -89,7 +89,7 @@ const AIRTABLE_API_KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c
 const AIRTABLE_BASE_ID='appRp0o1yWMEMrhbO';
 const AIRTABLE_TABLE='tblJTJZVtJS57rkGt';
 const MASTERLIST='tblP9izXvEOZj29Gz';
-const WIN_SCORE=500;
+let WIN_SCORE=500;
 
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
@@ -108,7 +108,7 @@ function resize(){
   GOBLIN_Y=GH-Math.round(GH*0.13);
   GOBLIN_X=GW/2;
 }
-window.addEventListener('resize',()=>{resize(); if(!gameRunning) drawStartBG();});
+window.addEventListener('resize',()=>{ resize(); if(typeof drawStartBG==='function' && !gameRunning) drawStartBG(); });
 
 let LANE_W, LANE_X, GOBLIN_Y, GOBLIN_X;
 resize();
@@ -364,21 +364,12 @@ function drawHUD(){
 
 goblinImg.src = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAvAEQDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAUGCAQDB//EAC8QAAAGAQMCBAMJAAAAAAAAAAABAgMEBREGEiEHMRNBUWEIFHEVIiRSU4GRs8H/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAwEEAgX/xAAlEQACAgECBAcAAAAAAAAAAAAAAQIDEhFBBDGRsQUTISJRcaH/2gAMAwEAAhEDEQA/AMZAAAAAAAAAAAAAAAAAAJq20lqqoq2LW10zdQK+QaSZlSYDrTLpqLKdq1JIjyRGZYPkhbNY9INV6b0BQ6sfqrpZWDclywjrqnW/swm3CQg3VnnBLI9xGok8ds9xZejlhMu9EdZX7V9UpcykKc/4nO98njUlw/cjUZl9RGdUCNXQDpGtJbkJRboUouxK+aSePrjyGtrFrf2vrku8e3IyLUm0tm1+J69GdGm9IzW41bCsaJZWjrZeG27F2uKSozIiwZc8cfsY95+nIEWQ7EmUkZh5B7VoXHSlST/jI+yfDhAtZWhn3tQNSI9p4aI7T7qdrzbKUbWyI+6cERcd+OReLKjjW1QzQzJK35bG03ZDikrUvB5X3PODLdgvLj0HzrPFfJswlHXQhLiXGWOOpjvVWiVKrJNtSwZCmoid8pLaFLQhH5jPnbjBnzxgj9BQBqH4qqqfVVSD09GebhyYqGrI2ed7batxKX5nylOVe3Iy8Oyq1XRzXJloSzWQAAFD0AAAB2V9raV0eXHr7KZEZmteDKbYfUhL7ec7FkR4Un2PJDphaj1DCo5FFDvrSNUylGqRBaluIjvGZERmpsj2qPCS7l5F6CKAAvQ1fpLrBoWBYvpf1OhiI40eSVAkLSteSwRkSM9t3Im0dXejqHfFRa0yHP1CpZOf6v8ARjUBw28BXbLJtkp1Zyy1a+jSvU/qlo69gXjEXUZTDegusxPwbyCUamTLaWUFj7x9zGagAdVdariorYolokvgAAChoAAAH//Z';
 
-function drawGoblin(){
-  const x=GOBLIN_X, y=GOBLIN_Y;
-  const bob=Math.sin(goblinAnim)*2.5;
-  const sz=Math.round(GH*0.09);
 
-  ctx.save();
-  ctx.translate(x, y+bob);
-  if(hitFlash>0){ ctx.shadowColor='#ff2200'; ctx.shadowBlur=22; }
-  ctx.font=sz+'px serif';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.fillText('🧌', 0, 0);
-  ctx.shadowBlur=0;
-  ctx.restore();
-}
+
+
+
+
+
 
 function drawStartBG(){
   drawBG();
@@ -388,7 +379,7 @@ function drawStartBG(){
 // ---- INPUT ----
 let touchStartX=null, touchStartTime=0;
 let goblinTargetX=null;
-const keys={};
+var keys={};
 
 document.addEventListener('keydown', e=>{ keys[e.key]=true; });
 document.addEventListener('keyup', e=>{ keys[e.key]=false; });
@@ -615,8 +606,28 @@ async function claimSpot(){
     btn.textContent='ur in goblin'; btn.style.background='rgba(42,92,42,0.8)';
   } catch(e){ btn.disabled=false; btn.textContent='broke — try again'; }
 }
+// ---- GOBLIN IMAGE ----
+var goblinImg = new Image();
+goblinImg.src = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAvAEQDASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAUGCAQDB//EAC8QAAAGAQMCBAMJAAAAAAAAAAABAgMEBREGEiEHMRNBUWEIFHEVIiRSU4GRs8H/xAAZAQEBAQEBAQAAAAAAAAAAAAAAAwEEAgX/xAAlEQACAgECBAcAAAAAAAAAAAAAAQIDEhFBBDGRsQUTISJRcaH/2gAMAwEAAhEDEQA/AMZAAAAAAAAAAAAAAAAAAJq20lqqoq2LW10zdQK+QaSZlSYDrTLpqLKdq1JIjyRGZYPkhbNY9INV6b0BQ6sfqrpZWDclywjrqnW/swm3CQg3VnnBLI9xGok8ds9xZejlhMu9EdZX7V9UpcykKc/4nO98njUlw/cjUZl9RGdUCNXQDpGtJbkJRboUouxK+aSePrjyGtrFrf2vrku8e3IyLUm0tm1+J69GdGm9IzW41bCsaJZWjrZeG27F2uKSozIiwZc8cfsY95+nIEWQ7EmUkZh5B7VoXHSlST/jI+yfDhAtZWhn3tQNSI9p4aI7T7qdrzbKUbWyI+6cERcd+OReLKjjW1QzQzJK35bG03ZDikrUvB5X3PODLdgvLj0HzrPFfJswlHXQhLiXGWOOpjvVWiVKrJNtSwZCmoid8pLaFLQhH5jPnbjBnzxgj9BQBqH4qqqfVVSD09GebhyYqGrI2ed7batxKX5nylOVe3Iy8Oyq1XRzXJloSzWQAAFD0AAAB2V9raV0eXHr7KZEZmteDKbYfUhL7ec7FkR4Un2PJDphaj1DCo5FFDvrSNUylGqRBaluIjvGZERmpsj2qPCS7l5F6CKAAvQ1fpLrBoWBYvpf1OhiI40eSVAkLSteSwRkSM9t3Im0dXejqHfFRa0yHP1CpZOf6v8ARjUBw28BXbLJtkp1Zyy1a+jSvU/qlo69gXjEXUZTDegusxPwbyCUamTLaWUFj7x9zGagAdVdariorYolokvgAAChoAAAH//Z';
 
-// init bg on start screen
+function drawGoblin(){
+  const x=GOBLIN_X, y=GOBLIN_Y;
+  const bob=Math.sin(goblinAnim)*2.5;
+  const size=Math.round(GH*0.1);
+  ctx.save();
+  ctx.translate(x, y+bob);
+  if(hitFlash>0){ ctx.shadowColor='#ff2200'; ctx.shadowBlur=22; }
+  ctx.imageSmoothingEnabled=false;
+  if(goblinImg.complete && goblinImg.naturalWidth){
+    ctx.drawImage(goblinImg, -size*0.6, -size*1.1, size*1.2, size*1.2);
+  } else {
+    ctx.fillStyle='#3a6e20'; ctx.fillRect(-size*0.5,-size*0.9,size,size);
+  }
+  ctx.shadowBlur=0;
+  ctx.restore();
+}
+
+// init
 drawStartBG();
 </script>
 </body>
