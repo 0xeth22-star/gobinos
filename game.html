@@ -99,6 +99,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
+  <!-- Admin login -->
+  <div class="overlay" id="adminLoginScreen" style="display:none">
+    <div class="card" style="max-width:280px;">
+      <div class="o-title" style="font-size:1.2rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
+      <input class="o-input" id="adminPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')checkAdminPass()">
+      <div class="o-err" id="adminPassErr">wrong passcode</div>
+      <button class="o-btn" onclick="checkAdminPass()" style="font-size:.85rem;">unlock</button>
+      <button class="o-btn" onclick="document.getElementById('adminLoginScreen').style.display='none'" style="font-size:.7rem;padding:8px;background:transparent;margin-top:4px;">cancel</button>
+    </div>
+  </div>
+
   <!-- Admin panel — triple-tap score to open -->
   <div class="overlay" id="adminScreen" style="display:none">
     <div class="card" style="max-height:88vh;overflow-y:auto;">
@@ -528,29 +539,24 @@ function gameLoop(ts){
 }
 
 // ---- GAME CONTROL ----
-// triple-tap score to open admin
-var scoreTapCount=0, scoreTapTimer=null;
-function scoreTapped(){
-  scoreTapCount++;
-  if(scoreTapTimer) clearTimeout(scoreTapTimer);
-  scoreTapTimer=setTimeout(function(){ scoreTapCount=0; },600);
-  if(scoreTapCount>=3){
-    scoreTapCount=0;
-    openAdmin();
-  }
+// ---- ADMIN ACCESS — works everywhere ----
+var adminTapCount=0, adminTapTimer=null;
+function adminTap(){
+  adminTapCount++;
+  if(adminTapTimer) clearTimeout(adminTapTimer);
+  adminTapTimer=setTimeout(function(){ adminTapCount=0; },700);
+  if(adminTapCount>=3){ adminTapCount=0; openAdmin(); }
 }
-
-// tap score area (bottom center of canvas)
-canvas.addEventListener('click', function(e){
-  var r=canvas.getBoundingClientRect();
-  var cy=(e.clientY-r.top)*(canvas.height/r.height);
-  if(cy>GH*0.88) scoreTapped();
-}, true);
-canvas.addEventListener('touchend', function(e){
-  var r=canvas.getBoundingClientRect();
-  var cy=(e.changedTouches[0].clientY-r.top)*(canvas.height/r.height);
-  if(cy>GH*0.88) scoreTapped();
-}, true);
+// Shift+G+G keyboard shortcut
+var gCount=0, gTimer;
+document.addEventListener('keydown', function(e){
+  if(e.key==='G' && e.shiftKey){
+    gCount++;
+    clearTimeout(gTimer);
+    gTimer=setTimeout(function(){ gCount=0; },800);
+    if(gCount>=2){ gCount=0; openAdmin(); }
+  }
+});
 
 function togglePause(){
   if(!gameRunning && !gamePaused) return;
