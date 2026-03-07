@@ -6,977 +6,242 @@
 <title>Gobinos</title>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --green: #2a5c2a;
-    --bright: #4ade80;
-    --mud: #111208;
-    --slime: #6b8f3e;
-    --bone: #e8dcc8;
-    --blood: #cc2200;
-    --dark: #0a0a0a;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--mud);
-    background-image: radial-gradient(ellipse at 30% 60%, rgba(42,92,42,0.12) 0%, transparent 60%);
-    min-height: 100vh;
-    font-family: 'Space Mono', monospace;
-    color: var(--bone);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  .card {
-    width: 100%;
-    max-width: 480px;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(107,143,62,0.25);
-    border-radius: 6px;
-    padding: 40px 36px;
-    position: relative;
-  }
-
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--bright), transparent);
-  }
-
-  .tag {
-    font-size: 0.55rem;
-    letter-spacing: 4px;
-    color: var(--slime);
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-
-  .title {
-    font-family: 'Creepster', cursive;
-    font-size: 2.8rem;
-    color: var(--bright);
-    letter-spacing: 4px;
-    text-shadow: 0 0 24px rgba(74,222,128,0.3);
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-
-  .desc {
-    font-size: 0.65rem;
-    color: rgba(232,220,200,0.4);
-    letter-spacing: 1px;
-    line-height: 1.8;
-    margin-bottom: 32px;
-    border-left: 2px solid rgba(107,143,62,0.3);
-    padding-left: 12px;
-  }
-
-  .spots-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
-    padding: 12px 14px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(107,143,62,0.15);
-    border-radius: 4px;
-    gap: 16px;
-  }
-
-  .spots-left { flex: 1; }
-
-  .spots-label {
-    font-size: 0.55rem;
-    letter-spacing: 3px;
-    color: var(--slime);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .progress-bar {
-    width: 100%;
-    height: 3px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: var(--bright);
-    border-radius: 2px;
-    transition: width 0.5s ease;
-  }
-
-  .spots-count {
-    font-family: 'Creepster', cursive;
-    font-size: 1.8rem;
-    color: var(--bright);
-    letter-spacing: 2px;
-    white-space: nowrap;
-  }
-
-  .spots-count.low { color: var(--blood); }
-
-  /* Countdown */
-  .countdown-row {
-    text-align: center;
-    margin-bottom: 24px;
-    padding: 10px 14px;
-    background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(107,143,62,0.1);
-    border-radius: 4px;
-  }
-
-  .countdown-label {
-    font-size: 0.5rem;
-    letter-spacing: 3px;
-    color: var(--slime);
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-
-  .countdown-timer {
-    font-family: 'Creepster', cursive;
-    font-size: 1.6rem;
-    color: var(--bright);
-    letter-spacing: 3px;
-  }
-
-  .countdown-timer.urgent { color: var(--blood); animation: blink 0.8s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-  .field { margin-bottom: 20px; }
-
-  .field label {
-    display: block;
-    font-size: 0.55rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--slime);
-    margin-bottom: 8px;
-  }
-
-  .field input {
-    width: 100%;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(107,143,62,0.2);
-    border-radius: 4px;
-    padding: 13px 14px;
-    color: var(--bone);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .field input::placeholder { color: rgba(232,220,200,0.15); }
-  .field input:focus {
-    border-color: rgba(74,222,128,0.5);
-    box-shadow: 0 0 0 2px rgba(74,222,128,0.08);
-  }
-  .field input.err { border-color: rgba(204,34,0,0.6); }
-
-  .err-msg {
-    font-size: 0.55rem;
-    color: var(--blood);
-    letter-spacing: 1px;
-    margin-top: 5px;
-    display: none;
-  }
-  .err-msg.show { display: block; }
-
-  .btn {
-    width: 100%;
-    padding: 15px;
-    background: var(--green);
-    border: 1px solid rgba(74,222,128,0.4);
-    border-radius: 4px;
-    color: var(--bone);
-    font-family: 'Creepster', cursive;
-    font-size: 1.2rem;
-    letter-spacing: 3px;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 8px;
-    text-transform: uppercase;
-  }
-
-  .btn:hover { background: rgba(42,92,42,0.9); box-shadow: 0 0 16px rgba(74,222,128,0.2); }
-  .btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
-
-  .fine-print {
-    margin-top: 16px;
-    font-size: 0.5rem;
-    color: rgba(232,220,200,0.2);
-    letter-spacing: 1px;
-    text-align: center;
-    line-height: 2;
-  }
-
-  .alt-screen { display: none; text-align: center; padding: 20px 0; }
-  .alt-screen.show { display: block; }
-
-  .alt-title {
-    font-family: 'Creepster', cursive;
-    font-size: 2.2rem;
-    letter-spacing: 3px;
-    margin-bottom: 12px;
-  }
-
-  .alt-sub {
-    font-size: 0.62rem;
-    color: rgba(232,220,200,0.4);
-    letter-spacing: 2px;
-    line-height: 2;
-  }
-
-  #successScreen .alt-title { color: var(--bright); }
-  #closedScreen .alt-title { color: var(--blood); }
-
-  .toast {
-    position: fixed;
-    bottom: 28px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--dark);
-    border: 1px solid var(--slime);
-    border-radius: 4px;
-    padding: 12px 24px;
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-    z-index: 999;
-    white-space: nowrap;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.err-toast { border-color: var(--blood); color: #ff6b6b; }
-
-  /* ---- ADMIN PANEL ---- */
-  .admin-toggle {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    background: transparent;
-    border: none;
-    width: 20px;
-    height: 20px;
-    cursor: default;
-    opacity: 0;
-  }
-
-  .admin-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-  .admin-overlay.show { display: flex; }
-
-  .admin-card {
-    background: #0d0d0d;
-    border: 1px solid rgba(107,143,62,0.3);
-    border-radius: 6px;
-    padding: 32px;
-    width: 100%;
-    max-width: 400px;
-    position: relative;
-  }
-
-  .admin-title {
-    font-family: 'Creepster', cursive;
-    font-size: 1.4rem;
-    color: var(--slime);
-    letter-spacing: 3px;
-    margin-bottom: 24px;
-  }
-
-  .admin-field { margin-bottom: 16px; }
-
-  .admin-field label {
-    display: block;
-    font-size: 0.5rem;
-    letter-spacing: 3px;
-    color: var(--slime);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-
-  .admin-field input {
-    width: 100%;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(107,143,62,0.2);
-    border-radius: 4px;
-    padding: 10px 12px;
-    color: var(--bone);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.75rem;
-    outline: none;
-  }
-  .admin-field input:focus { border-color: rgba(74,222,128,0.4); }
-
-  .admin-field input[type="password"] { letter-spacing: 2px; }
-
-  .admin-btn {
-    width: 100%;
-    padding: 12px;
-    background: var(--green);
-    border: 1px solid rgba(74,222,128,0.3);
-    border-radius: 4px;
-    color: var(--bone);
-    font-family: 'Creepster', cursive;
-    font-size: 1rem;
-    letter-spacing: 3px;
-    cursor: pointer;
-    margin-top: 8px;
-    text-transform: uppercase;
-  }
-  .admin-btn:hover { box-shadow: 0 0 12px rgba(74,222,128,0.2); }
-
-  .admin-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    color: rgba(232,220,200,0.3);
-    cursor: pointer;
-    font-size: 1rem;
-    font-family: 'Space Mono', monospace;
-  }
-
-  .admin-note {
-    font-size: 0.5rem;
-    color: rgba(232,220,200,0.2);
-    letter-spacing: 1px;
-    margin-top: 12px;
-    line-height: 1.8;
-  }
-
-  .admin-status {
-    font-size: 0.55rem;
-    margin-top: 10px;
-    letter-spacing: 1px;
-    color: var(--bright);
-    display: none;
-  }
-  .admin-status.show { display: block; }
-  .admin-status.err { color: var(--blood); }
+  :root { --green:#2a5c2a; --bright:#4ade80; --mud:#111208; --slime:#6b8f3e; --bone:#e8dcc8; --blood:#cc2200; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--mud);background-image:radial-gradient(ellipse at 30% 60%,rgba(42,92,42,0.12) 0%,transparent 60%);min-height:100vh;font-family:'Space Mono',monospace;color:var(--bone);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .card{width:100%;max-width:480px;background:rgba(0,0,0,0.5);border:1px solid rgba(107,143,62,0.25);border-radius:6px;padding:40px 36px;position:relative;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--bright),transparent);}
+  .title{font-family:'Creepster',cursive;font-size:2.8rem;color:var(--bright);letter-spacing:4px;text-shadow:0 0 24px rgba(74,222,128,0.3);line-height:1;margin-bottom:6px;text-align:center;}
+  .closed-title{font-family:'Creepster',cursive;font-size:1.8rem;letter-spacing:3px;color:var(--blood);text-align:center;margin-top:20px;margin-bottom:8px;}
+  .closed-sub{font-size:.62rem;color:rgba(232,220,200,.35);letter-spacing:2px;line-height:2;text-align:center;margin-bottom:4px;}
+  .game-btn{display:block;width:100%;margin-top:28px;padding:16px;background:var(--green);border:1px solid rgba(74,222,128,0.4);border-radius:4px;color:var(--bone);font-family:'Creepster',cursive;font-size:1.2rem;letter-spacing:3px;cursor:pointer;text-transform:uppercase;text-align:center;text-decoration:none;transition:all .2s;position:relative;}
+  .game-btn:hover{background:rgba(42,92,42,.9);box-shadow:0 0 20px rgba(74,222,128,.2);}
+  .game-sub{font-size:.46rem;color:rgba(74,222,128,.35);letter-spacing:3px;text-align:center;margin-top:8px;text-transform:uppercase;}
+  .divider{border-top:1px solid rgba(107,143,62,.1);margin:24px 0;}
+  .checker-label{font-size:.48rem;letter-spacing:3px;color:var(--slime);text-transform:uppercase;margin-bottom:10px;text-align:center;}
+  .checker-row{display:flex;gap:8px;}
+  .checker-input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(107,143,62,.2);border-radius:4px;padding:11px 12px;color:var(--bone);font-family:'Space Mono',monospace;font-size:.72rem;outline:none;transition:border-color .2s;}
+  .checker-input::placeholder{color:rgba(232,220,200,.15);}
+  .checker-input:focus{border-color:rgba(74,222,128,.4);}
+  .checker-input.err{border-color:rgba(204,34,0,.5);}
+  .checker-btn{padding:11px 16px;background:rgba(42,92,42,.5);border:1px solid rgba(74,222,128,.3);border-radius:4px;color:var(--bone);font-family:'Creepster',cursive;font-size:.95rem;letter-spacing:2px;cursor:pointer;white-space:nowrap;transition:background .2s;}
+  .checker-btn:hover{background:rgba(42,92,42,.8);}
+  .checker-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .checker-result{margin-top:10px;font-size:.62rem;letter-spacing:2px;text-align:center;padding:10px;border-radius:4px;display:none;}
+  /* admin */
+  .admin-toggle{position:fixed;bottom:16px;right:16px;background:transparent;border:none;width:20px;height:20px;cursor:default;opacity:0;}
+  .admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;padding:24px;}
+  .admin-overlay.show{display:flex;}
+  .admin-card{background:#0d0d0d;border:1px solid rgba(107,143,62,.3);border-radius:6px;padding:32px;width:100%;max-width:400px;position:relative;max-height:88vh;overflow-y:auto;}
+  .admin-title{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--slime);letter-spacing:3px;margin-bottom:24px;}
+  .admin-field{margin-bottom:14px;}
+  .admin-field label{display:block;font-size:.48rem;letter-spacing:3px;color:var(--slime);text-transform:uppercase;margin-bottom:6px;}
+  .admin-field input,.admin-field textarea{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.2);border-radius:4px;padding:10px 12px;color:var(--bone);font-family:'Space Mono',monospace;font-size:.72rem;outline:none;resize:none;}
+  .admin-field input:focus,.admin-field textarea:focus{border-color:rgba(74,222,128,.4);}
+  .admin-btn{width:100%;padding:12px;background:var(--green);border:1px solid rgba(74,222,128,.3);border-radius:4px;color:var(--bone);font-family:'Creepster',cursive;font-size:1rem;letter-spacing:3px;cursor:pointer;margin-top:6px;text-transform:uppercase;}
+  .admin-btn.sm{font-size:.8rem;padding:10px;}
+  .admin-btn.ghost{background:rgba(0,0,0,.4);}
+  .admin-btn.danger{background:rgba(100,0,0,.4);border-color:rgba(204,34,0,.4);}
+  .admin-close{position:absolute;top:16px;right:16px;background:none;border:none;color:rgba(232,220,200,.3);cursor:pointer;font-size:1rem;font-family:'Space Mono',monospace;}
+  .s-divider{border-top:1px solid rgba(107,143,62,.1);margin:14px 0;padding-top:12px;}
+  .s-label{font-size:.44rem;letter-spacing:3px;color:rgba(107,143,62,.45);text-transform:uppercase;margin-bottom:8px;}
+  .admin-status{font-size:.52rem;margin-top:10px;letter-spacing:1px;color:var(--bright);display:none;}
+  .admin-status.show{display:block;}
+  .admin-status.err{color:var(--blood);}
 </style>
 </head>
 <body>
 
-<div class="card" id="mainCard" style="opacity:0;transition:opacity 0.2s">
+<div class="card" id="mainCard" style="opacity:0;transition:opacity .3s">
+  <div class="title" id="gobTitle">GOBINOS</div>
 
-  <!-- Main form -->
-  <div id="formScreen" style="display:none">
-
-    <div class="title" id="gobTitle">GOBINOS</div>
-    <div class="desc">
-      just bunch of ugly goblins in the eth trenches<br>
-      if u jeet u ngmi
-    </div>
-
-    <div id="countdownRow" class="countdown-row" style="display:none">
-      <div class="countdown-label">closes in</div>
-      <div class="countdown-timer" id="countdown">--:--:--</div>
-    </div>
-
-    <div class="spots-row">
-      <div class="spots-left">
-        <div class="spots-label">spots left</div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width:100%"></div>
-        </div>
-      </div>
-      <div class="spots-count" id="spotsCount">--</div>
-    </div>
-
-    <div class="field">
-      <label>follow</label>
-      <a href="https://x.com/gobinosoneth" target="_blank" style="display:block;width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:13px 14px;color:var(--bright);font-family:'Space Mono',monospace;font-size:0.8rem;text-decoration:none;letter-spacing:1px;">@gobinosoneth</a>
-    </div>
-
-    <div class="field">
-      <label>drop your handle</label>
-      <input type="text" id="twitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
-      <div class="err-msg" id="twitterErr">need your handle</div>
-    </div>
-
-    <div class="field">
-      <label>EVM wallet</label>
-      <input type="text" id="wallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
-      <div class="err-msg" id="walletErr">enter a valid wallet</div>
-    </div>
-
-    <button class="btn" id="submitBtn" onclick="handleSubmit()">Enter the Trenches</button>
-
-    <div class="fine-print">
-      one wallet per entry<br>
-      <span id="checkerLink" onclick="openChecker()" style="color:var(--bright);cursor:pointer;font-size:0.65rem;letter-spacing:2px;border-bottom:1px solid rgba(74,222,128,0.4);display:none">check my spot</span>
-    </div>
+  <div class="closed-title">closed</div>
+  <div class="closed-sub">
+    <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,.55);text-decoration:none;">@gobinosoneth</a>
   </div>
 
-  <!-- Success -->
-  <div class="alt-screen" id="successScreen">
-    <div class="alt-title">stay locked in</div>
-  </div>
+  <a href="/game" class="game-btn" id="gameBtn" style="display:none">enter the trenches</a>
+  <div class="game-sub" id="gameSub" style="display:none">500 kills = goblist spot</div>
 
-  <!-- Checker -->
-  <div class="alt-screen" id="checkerScreen">
-    <div style="text-align:left;padding:4px 0">
-      <div class="tag" style="margin-bottom:20px">check your spot</div>
-      <div class="field">
-        <label>your wallet</label>
-        <input type="text" id="checkWallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
-        <div class="err-msg" id="checkErr">enter a valid wallet</div>
-      </div>
-      <button class="btn" onclick="checkWallet()">check</button>
-      <div id="checkResult" style="margin-top:16px;font-size:0.65rem;letter-spacing:2px;text-align:center;display:none"></div>
-      <div style="margin-top:20px;text-align:center">
-        <span onclick="showFormOrClosed()" style="font-size:0.55rem;letter-spacing:2px;color:rgba(107,143,62,0.5);cursor:pointer;text-transform:uppercase;">back</span>
-      </div>
+  <div class="divider" id="checkerSection" style="display:none">
+    <div class="checker-label">check your spot</div>
+    <div class="checker-row">
+      <input class="checker-input" id="checkInput" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
+      <button class="checker-btn" id="checkBtn" onclick="doCheck()">check</button>
     </div>
+    <div class="checker-result" id="checkResult"></div>
   </div>
-
-  <!-- Closed by spots -->
-  <div class="alt-screen" id="closedScreen">
-    <div class="alt-title">spots gone</div>
-    <div class="alt-sub">
-      that's it for this round<br>
-      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a> for what's next
-    </div>
-    <div style="margin-top:20px">
-      <span id="checkerLinkClosed" onclick="openChecker()" style="color:var(--bright);cursor:pointer;font-size:0.65rem;letter-spacing:2px;border-bottom:1px solid rgba(74,222,128,0.4);display:none">check my spot</span>
-    </div>
-  </div>
-
-  <!-- Closed by time -->
-  <div class="alt-screen" id="expiredScreen">
-    <div class="alt-title">closed</div>
-    <div class="alt-sub">
-      <a href="https://x.com/gobinosoneth" target="_blank" style="color:rgba(107,143,62,0.6);text-decoration:none;">@gobinosoneth</a>
-    </div>
-    <div style="margin-top:20px">
-      <span id="checkerLinkExpired" onclick="openChecker()" style="color:var(--bright);cursor:pointer;font-size:0.65rem;letter-spacing:2px;border-bottom:1px solid rgba(74,222,128,0.4);display:none">check my spot</span>
-    </div>
-  </div>
-
 </div>
 
-<!-- Admin toggle: press Shift+G+G to open -->
 <button class="admin-toggle" onclick="openAdmin()"></button>
 
-<!-- Admin overlay -->
 <div class="admin-overlay" id="adminOverlay">
   <div class="admin-card">
     <button class="admin-close" onclick="closeAdmin()">x</button>
-    <div class="admin-title">ADMIN PANEL</div>
+    <div class="admin-title">ADMIN</div>
 
     <div id="adminLogin">
       <div class="admin-field">
         <label>password</label>
-        <input type="password" id="adminPass" placeholder="enter password" onkeydown="if(event.key==='Enter')checkPass()">
+        <input type="password" id="adminPass" placeholder="password" onkeydown="if(event.key==='Enter')checkPass()">
       </div>
       <button class="admin-btn" onclick="checkPass()">unlock</button>
       <div class="admin-status err" id="passErr">wrong password</div>
     </div>
 
     <div id="adminControls" style="display:none">
-      <div class="admin-field">
-        <label>total spots</label>
-        <input type="number" id="adminSpots" min="1" max="10000" placeholder="e.g. 100">
+
+      <div class="s-label">checker</div>
+      <button class="admin-btn sm" id="checkerBtn" onclick="toggleChecker()">checker: off</button>
+      <button class="admin-btn sm" id="gameToggleBtn" onclick="toggleGame()" style="margin-top:4px;">game button: off</button>
+
+      <div class="s-divider">
+        <div class="s-label">export</div>
+        <button class="admin-btn sm ghost" onclick="exportWallets('allowlist')">export allowlist</button>
+        <button class="admin-btn sm ghost" onclick="exportWallets('masterlist')">export masterlist</button>
       </div>
-      <div class="admin-field">
-        <label>deadline (leave blank = no timer)</label>
-        <input type="datetime-local" id="adminDeadline">
+
+      <div class="s-divider">
+        <div class="s-label">import wallets</div>
+        <div class="admin-field">
+          <textarea id="importData" rows="4" placeholder="0x..."></textarea>
+        </div>
+        <div class="admin-field">
+          <input id="importHandle" placeholder="@collab handle (optional)">
+        </div>
+        <button class="admin-btn sm" onclick="importWallets()">import</button>
       </div>
-      <div class="admin-field">
-        <label>checker</label>
-        <button class="admin-btn" id="checkerToggleBtn" onclick="toggleChecker()" style="font-size:0.85rem;margin-top:0"></button>
+
+      <div class="s-divider">
+        <div class="s-label">danger</div>
+        <button class="admin-btn sm danger" onclick="clearPhase()">clear allowlist</button>
       </div>
-      <button class="admin-btn" onclick="saveAdmin()">save + apply</button>
-      <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="exportWallets()">export wallets</button>
-      <button class="admin-btn" style="margin-top:8px;background:rgba(0,0,0,0.4);font-size:0.85rem;" onclick="document.getElementById('importFile').click()">import wallets</button>
-      <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importWallets(this)">
-      <button class="admin-btn" style="margin-top:8px;background:rgba(100,0,0,0.4);border-color:rgba(204,34,0,0.4);font-size:0.85rem;" onclick="clearPhase()">clear phase</button>
+
       <div class="admin-status" id="adminStatus"></div>
-      <div class="admin-note">
-        changes apply instantly.<br>
-        deadline is your local timezone.
-      </div>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
-  // ==========================================
-  // CONFIG
-  // ==========================================
-  const AIRTABLE_API_KEY = 'patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
-  const AIRTABLE_BASE_ID = 'appRp0o1yWMEMrhbO';
-  const AIRTABLE_TABLE   = 'tblJTJZVtJS57rkGt';
-  const MASTERLIST       = 'tblP9izXvEOZj29Gz';
-  const CONFIG_TABLE     = 'tblAMYHI1S6OTihNO';
-  const ADMIN_PASSWORD   = 'gobinos2024';
-  // ==========================================
+var KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
+var BASE='appRp0o1yWMEMrhbO';
+var TABLE='tblJTJZVtJS57rkGt';
+var MASTERLIST='tblP9izXvEOZj29Gz';
+var CONFIG='tblAMYHI1S6OTihNO';
+var PASS='gobinos2024';
+var checkerOn=false, gameOn=false, configId=null;
 
-  let maxSpots    = 100;
-  let deadline    = '';
-  let currentSpots = maxSpots;
-  let configRecordId = null;
-  let timerInterval;
+async function init(){
+  try{
+    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG,{headers:{'Authorization':'Bearer '+KEY}});
+    var d=await r.json();
+    if(d.records&&d.records.length){configId=d.records[0].id;checkerOn=d.records[0].fields.Checker==='1';gameOn=d.records[0].fields.GameOn==='1';}applyGame();
+    applyChecker();applyGame();
+  }catch(e){}
+  document.getElementById('mainCard').style.opacity='1';
+}
 
-  async function loadConfig() {
-    try {
-      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}`, {
-        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
-      });
-      const data = await res.json();
-      if (data.records && data.records.length > 0) {
-        const r = data.records[0];
-        configRecordId = r.id;
-        maxSpots = parseInt(r.fields.Spots || '100');
-        deadline = r.fields.Deadline || '';
-        checkerEnabled = r.fields.Checker === '1';
-      }
-    } catch(e) {}
-  }
+function applyChecker(){
+  document.getElementById('checkerSection').style.display=checkerOn?'block':'none';
+  var b=document.getElementById('checkerBtn');
+  if(b)b.textContent='checker: '+(checkerOn?'on':'off');
+}
 
-  async function saveConfig() {
-    const body = { fields: { Spots: String(maxSpots), Deadline: deadline, Checker: checkerEnabled ? '1' : '0' } };
-    if (configRecordId) {
-      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}/${configRecordId}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    } else {
-      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${CONFIG_TABLE}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      configRecordId = data.id;
+function applyGame(){
+  document.getElementById('gameBtn').style.display=gameOn?'block':'none';
+  document.getElementById('gameSub').style.display=gameOn?'block':'none';
+  var b=document.getElementById('gameToggleBtn');
+  if(b)b.textContent='game button: '+(gameOn?'on':'off');
+}
+
+function toggleGame(){
+  gameOn=!gameOn;applyGame();
+  var body={fields:{GameOn:gameOn?'1':'0'}};
+  var url=configId?'https://api.airtable.com/v0/'+BASE+'/'+CONFIG+'/'+configId:'https://api.airtable.com/v0/'+BASE+'/'+CONFIG;
+  fetch(url,{method:configId?'PATCH':'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  showStatus('game button '+(gameOn?'visible':'hidden'),false);
+}
+
+async function doCheck(){
+  var w=document.getElementById('checkInput').value.trim();
+  var res=document.getElementById('checkResult');
+  var btn=document.getElementById('checkBtn');
+  document.getElementById('checkInput').classList.remove('err');
+  if(!/^0x[a-fA-F0-9]{40}$/.test(w)){document.getElementById('checkInput').classList.add('err');return;}
+  btn.disabled=true;btn.textContent='...';
+  try{
+    var resp=await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST+'?filterByFormula=LOWER({Wallet})="'+w.toLowerCase()+'"',{headers:{'Authorization':'Bearer '+KEY}});
+    var data=await resp.json();
+    res.style.display='block';
+    if(data.records&&data.records.length){
+      res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.62rem;letter-spacing:2px;margin-top:10px;';
+      res.textContent='ur in goblin';
+    }else{
+      res.style.cssText='display:block;background:rgba(80,0,0,.3);border:1px solid rgba(204,34,0,.3);color:#cc2200;padding:10px;border-radius:4px;text-align:center;font-size:.62rem;letter-spacing:2px;margin-top:10px;';
+      res.textContent='ngmi ser';
     }
+  }catch(e){res.style.display='block';res.style.color='#cc2200';res.textContent='try again';}
+  btn.disabled=false;btn.textContent='check';
+}
+
+// admin open: triple-tap title or Shift+G+G
+var tapC=0,tapT; document.getElementById('gobTitle').addEventListener('click',function(){tapC++;clearTimeout(tapT);tapT=setTimeout(function(){tapC=0;},600);if(tapC>=3){tapC=0;openAdmin();}});
+var gC=0,gT; document.addEventListener('keydown',function(e){if(e.key==='G'&&e.shiftKey){gC++;clearTimeout(gT);gT=setTimeout(function(){gC=0;},800);if(gC>=2){gC=0;openAdmin();}}});
+
+function openAdmin(){document.getElementById('adminOverlay').classList.add('show');}
+function closeAdmin(){document.getElementById('adminOverlay').classList.remove('show');document.getElementById('adminLogin').style.display='block';document.getElementById('adminControls').style.display='none';document.getElementById('adminPass').value='';document.getElementById('passErr').style.display='none';}
+function checkPass(){if(document.getElementById('adminPass').value===PASS){document.getElementById('adminLogin').style.display='none';document.getElementById('adminControls').style.display='block';applyChecker();}else{document.getElementById('passErr').style.display='block';}}
+
+function toggleChecker(){
+  checkerOn=!checkerOn;applyChecker();
+  var body={fields:{Checker:checkerOn?'1':'0'}};
+  var url=configId?'https://api.airtable.com/v0/'+BASE+'/'+CONFIG+'/'+configId:'https://api.airtable.com/v0/'+BASE+'/'+CONFIG;
+  fetch(url,{method:configId?'PATCH':'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  showStatus(checkerOn?'checker enabled':'checker hidden',false);
+}
+
+async function exportWallets(type){
+  var tbl=type==='masterlist'?MASTERLIST:TABLE,name='gobinos-'+type;
+  showStatus('fetching...',false);
+  try{
+    var all=[],offset='';
+    do{var u='https://api.airtable.com/v0/'+BASE+'/'+tbl+'?pageSize=100'+(offset?'&offset='+offset:'');var r=await fetch(u,{headers:{'Authorization':'Bearer '+KEY}});var d=await r.json();all=all.concat(d.records||[]);offset=d.offset||'';}while(offset);
+    var lines=all.filter(function(r){return r.fields.Wallet;}).map(function(r){return r.fields.Wallet;});
+    var blob=new Blob([lines.join('\n')],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'.txt';a.click();
+    showStatus('exported '+lines.length,false);
+  }catch(e){showStatus('failed',true);}
+}
+
+async function importWallets(){
+  var raw=document.getElementById('importData').value.trim();
+  var handle=document.getElementById('importHandle').value.trim()||'collab';
+  if(!raw){showStatus('paste wallets first',true);return;}
+  var wallets=raw.split(/[\n,]+/).map(function(w){return w.trim();}).filter(function(w){return /^0x[a-fA-F0-9]{40}$/.test(w);});
+  if(!wallets.length){showStatus('no valid wallets',true);return;}
+  showStatus('importing '+wallets.length+'...',false);
+  var ok=0;
+  for(var i=0;i<wallets.length;i++){
+    var f={Twitter:handle,Wallet:wallets[i]};
+    try{await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{method:'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:f})});await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST,{method:'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:f})});ok++;}catch(e){}
+    if(i%10===0)showStatus('importing... '+ok+'/'+wallets.length,false);
   }
+  showStatus('done. '+ok+' imported',false);document.getElementById('importData').value='';
+}
 
-  // --- Init ---
-  async function init() {
-    const fallback = setTimeout(() => {
-      if (document.getElementById('mainCard').style.opacity !== '1') {
-        document.getElementById('formScreen').style.display = 'block';
-        applyCheckerState();
-        document.getElementById('mainCard').style.opacity = '1';
-      }
-    }, 6000);
+async function clearPhase(){
+  if(!confirm('delete all allowlist records? masterlist stays safe.'))return;
+  showStatus('clearing...',false);
+  try{
+    var ids=[],offset='';
+    do{var u='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100'+(offset?'&offset='+offset:'');var r=await fetch(u,{headers:{'Authorization':'Bearer '+KEY}});var d=await r.json();ids=ids.concat((d.records||[]).map(function(r){return r.id;}));offset=d.offset||'';}while(offset);
+    for(var i=0;i<ids.length;i+=10){var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+KEY}});}
+    showStatus('cleared '+ids.length,false);
+  }catch(e){showStatus('failed',true);}
+}
 
-    await loadConfig();
+function showStatus(msg,isErr){var el=document.getElementById('adminStatus');el.textContent=msg;el.className='admin-status show'+(isErr?' err':'');}
 
-    if (deadline && new Date(deadline) < new Date()) {
-      clearTimeout(fallback);
-      showScreen('expiredScreen');
-      document.getElementById('mainCard').style.opacity = '1';
-      return;
-    }
-    await fetchSpotCount();
-    clearTimeout(fallback);
-    startCountdown();
-    if (currentSpots > 0) {
-      document.getElementById('formScreen').style.display = 'block';
-    }
-    applyCheckerState();
-    document.getElementById('mainCard').style.opacity = '1';
-  }
-
-  async function fetchSpotCount() {
-    try {
-      let records = [];
-      let offset = '';
-      do {
-      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
-        const data = await res.json();
-        records = records.concat(data.records || []);
-        offset = data.offset || '';
-      } while (offset);
-
-      currentSpots = Math.max(0, maxSpots - records.length);
-      updateSpotsUI();
-      if (currentSpots === 0) showScreen('closedScreen');
-    } catch(e) {
-      updateSpotsUI();
-      document.getElementById('formScreen').style.display = 'block';
-      document.getElementById('mainCard').style.opacity = '1';
-    }
-  }
-
-  function updateSpotsUI() {
-    const el = document.getElementById('spotsCount');
-    const fill = document.getElementById('progressFill');
-    el.textContent = currentSpots;
-    fill.style.width = (currentSpots / maxSpots * 100) + '%';
-    if (currentSpots <= Math.ceil(maxSpots * 0.1)) {
-      el.classList.add('low');
-      fill.style.background = '#cc2200';
-    } else {
-      el.classList.remove('low');
-      fill.style.background = '';
-    }
-  }
-
-  function startCountdown() {
-    if (timerInterval) clearInterval(timerInterval);
-    if (!deadline) {
-      document.getElementById('countdownRow').style.display = 'none';
-      return;
-    }
-    document.getElementById('countdownRow').style.display = 'block';
-    tick();
-    timerInterval = setInterval(tick, 1000);
-  }
-
-  function tick() {
-    if (!deadline) return;
-    const diff = new Date(deadline) - new Date();
-    const el = document.getElementById('countdown');
-    if (diff <= 0) {
-      el.textContent = 'CLOSED';
-      clearInterval(timerInterval);
-      showScreen('expiredScreen');
-      return;
-    }
-    const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
-    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-    el.textContent = `${h}:${m}:${s}`;
-    if (diff < 3600000) el.classList.add('urgent');
-  }
-
-  function showScreen(id) {
-    document.getElementById('formScreen').style.display = 'none';
-    ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
-      document.getElementById(s).classList.remove('show');
-    });
-    document.getElementById(id).classList.add('show');
-  }
-
-  function openChecker() {
-    document.getElementById('formScreen').style.display = 'none';
-    ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
-      document.getElementById(s).classList.remove('show');
-    });
-    document.getElementById('checkerScreen').classList.add('show');
-    document.getElementById('checkWallet').value = '';
-    document.getElementById('checkResult').style.display = 'none';
-    document.getElementById('checkErr').classList.remove('show');
-  }
-
-  function showFormOrClosed() {
-    if (currentSpots > 0 && !(deadline && new Date(deadline) < new Date())) {
-      ['successScreen','closedScreen','expiredScreen','checkerScreen'].forEach(s => {
-        document.getElementById(s).classList.remove('show');
-      });
-      document.getElementById('formScreen').style.display = 'block';
-    } else {
-      showScreen('closedScreen');
-    }
-  }
-
-  async function checkWallet() {
-    const w = document.getElementById('checkWallet').value.trim();
-    const resultEl = document.getElementById('checkResult');
-    document.getElementById('checkErr').classList.remove('show');
-    resultEl.style.display = 'none';
-
-    if (!isValidWallet(w)) {
-      document.getElementById('checkErr').classList.add('show');
-      return;
-    }
-
-    const btn = document.querySelector('#checkerScreen .btn');
-    btn.disabled = true;
-    btn.textContent = 'checking...';
-
-    try {
-      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${MASTERLIST}?filterByFormula={Wallet}="${w}"`;
-      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
-      const data = await res.json();
-
-      resultEl.style.display = 'block';
-      if (data.records && data.records.length > 0) {
-        resultEl.style.color = 'var(--bright)';
-        resultEl.textContent = 'ur in goblin';
-      } else {
-        resultEl.style.color = 'var(--blood)';
-        resultEl.textContent = 'ngmi ser';
-      }
-    } catch(e) {
-      resultEl.style.display = 'block';
-      resultEl.style.color = 'var(--blood)';
-      resultEl.textContent = 'something broke. try again.';
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'check';
-  }
-
-  // --- Form ---
-  function showToast(msg, isErr) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (isErr ? ' err-toast' : '');
-    setTimeout(() => t.classList.remove('show'), 3500);
-  }
-
-  function isValidWallet(w) { return /^0x[a-fA-F0-9]{40}$/.test(w); }
-  function hasSubmitted(w) { return localStorage.getItem('gob_' + w.toLowerCase()) === '1'; }
-  function markSubmitted(w) { localStorage.setItem('gob_' + w.toLowerCase(), '1'); }
-
-  async function handleSubmit() {
-    document.querySelectorAll('.err-msg').forEach(e => e.classList.remove('show'));
-    document.querySelectorAll('.field input').forEach(i => i.classList.remove('err'));
-
-    // check deadline
-    if (deadline && new Date(deadline) < new Date()) { showScreen('expiredScreen'); return; }
-    if (currentSpots <= 0) { showScreen('closedScreen'); return; }
-
-    const twitter = document.getElementById('twitter').value.trim();
-    const wallet  = document.getElementById('wallet').value.trim();
-    let ok = true;
-
-    if (!twitter) {
-      document.getElementById('twitterErr').classList.add('show');
-      document.getElementById('twitter').classList.add('err');
-      ok = false;
-    }
-    if (!isValidWallet(wallet)) {
-      document.getElementById('walletErr').classList.add('show');
-      document.getElementById('wallet').classList.add('err');
-      ok = false;
-    }
-    if (!ok) return;
-
-    if (hasSubmitted(wallet)) { showToast('wallet already submitted', true); return; }
-
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = 'locking in...';
-
-    try {
-      const post = (table) => fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${table}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fields: { 'Twitter': twitter, 'Wallet': wallet } })
-      });
-
-      const res = await post(AIRTABLE_TABLE);
-      if (!res.ok) throw new Error();
-      await post(MASTERLIST); // also write to masterlist silently
-      markSubmitted(wallet);
-      currentSpots--;
-      showScreen('successScreen');
-
-    } catch(e) {
-      showToast('something broke. try again.', true);
-      btn.disabled = false;
-      btn.textContent = 'Enter the Trenches';
-    }
-  }
-
-  let checkerEnabled = false;
-
-  function applyCheckerState() {
-    ['checkerLink','checkerLinkClosed','checkerLinkExpired'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = checkerEnabled ? 'inline' : 'none';
-    });
-    const btn = document.getElementById('checkerToggleBtn');
-    if (btn) btn.textContent = checkerEnabled ? 'checker: on' : 'checker: off';
-  }
-
-  function toggleChecker() {
-    checkerEnabled = !checkerEnabled;
-    applyCheckerState();
-    saveConfig();
-    showAdminStatus(checkerEnabled ? 'checker enabled' : 'checker hidden', false);
-  }
-
-  // triple tap GOBINOS title to open admin on mobile
-  let tapCount = 0, tapTimer;
-  document.getElementById('gobTitle').addEventListener('click', () => {
-    tapCount++;
-    clearTimeout(tapTimer);
-    tapTimer = setTimeout(() => tapCount = 0, 600);
-    if (tapCount >= 3) { tapCount = 0; openAdmin(); }
-  });
-
-  // open admin with Shift+G+G
-  let gCount = 0, gTimer;
-  document.addEventListener('keydown', e => {
-    if (e.key === 'G' && e.shiftKey) {
-      gCount++;
-      clearTimeout(gTimer);
-      gTimer = setTimeout(() => gCount = 0, 800);
-      if (gCount >= 2) { gCount = 0; openAdmin(); }
-    }
-  });
-
-  // --- Admin ---
-  function openAdmin() { document.getElementById('adminOverlay').classList.add('show'); }
-  function closeAdmin() {
-    document.getElementById('adminOverlay').classList.remove('show');
-    document.getElementById('adminLogin').style.display = 'block';
-    document.getElementById('adminControls').style.display = 'none';
-    document.getElementById('adminPass').value = '';
-    document.getElementById('passErr').classList.remove('show');
-  }
-
-  function checkPass() {
-    const p = document.getElementById('adminPass').value;
-    if (p === ADMIN_PASSWORD) {
-      document.getElementById('adminLogin').style.display = 'none';
-      document.getElementById('adminControls').style.display = 'block';
-      document.getElementById('adminSpots').value = maxSpots;
-      document.getElementById('adminDeadline').value = deadline;
-      applyCheckerState();
-    } else {
-      document.getElementById('passErr').classList.add('show');
-    }
-  }
-
-  async function saveAdmin() {
-    const spots = parseInt(document.getElementById('adminSpots').value);
-    const dl    = document.getElementById('adminDeadline').value;
-
-    if (!spots || spots < 1) {
-      showAdminStatus('enter a valid spot count', true);
-      return;
-    }
-
-    maxSpots = spots;
-    deadline = dl;
-
-    showAdminStatus('saving...', false);
-    await saveConfig();
-    fetchSpotCount();
-    startCountdown();
-    showAdminStatus('saved.', false);
-    setTimeout(() => { closeAdmin(); location.reload(); }, 1000);
-  }
-
-  async function importWallets(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const text = await file.text();
-    const wallets = text.split('\n').map(w => w.trim()).filter(w => /^0x[a-fA-F0-9]{40}$/.test(w));
-    if (wallets.length === 0) { showAdminStatus('no valid wallets found', true); return; }
-
-    showAdminStatus(`importing ${wallets.length} wallets...`, false);
-
-    const post = async (table, wallet) => {
-      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${table}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fields: { Twitter: 'collab', Wallet: wallet } })
-      });
-    };
-
-    let done = 0;
-    for (const wallet of wallets) {
-      await post(AIRTABLE_TABLE, wallet);
-      await post(MASTERLIST, wallet);
-      done++;
-      if (done % 5 === 0) showAdminStatus(`importing... ${done}/${wallets.length}`, false);
-    }
-
-    await fetchSpotCount();
-    showAdminStatus(`imported ${wallets.length} wallets`, false);
-    input.value = '';
-  }
-
-  async function exportWallets() {
-    showAdminStatus('fetching wallets...', false);
-    try {
-      let records = [];
-      let offset = '';
-      do {
-        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
-        const data = await res.json();
-        records = records.concat(data.records || []);
-        offset = data.offset || '';
-      } while (offset);
-
-      const wallets = records
-        .map(r => r.fields.Wallet)
-        .filter(Boolean)
-        .join('\n');
-
-      const blob = new Blob([wallets], { type: 'text/plain' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'gobinos-wallets.txt';
-      a.click();
-      showAdminStatus(`exported ${records.length} wallets`, false);
-    } catch(e) {
-      showAdminStatus('export failed', true);
-    }
-  }
-
-  async function clearPhase() {
-    if (!confirm('delete all records? this cannot be undone.')) return;
-    showAdminStatus('clearing...', false);
-    try {
-      let records = [];
-      let offset = '';
-      do {
-        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?maxRecords=10000${offset ? '&offset=' + offset : ''}`;
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
-        const data = await res.json();
-        records = records.concat(data.records || []);
-        offset = data.offset || '';
-      } while (offset);
-
-      // delete in batches of 10
-      for (let i = 0; i < records.length; i += 10) {
-        const batch = records.slice(i, i + 10).map(r => r.id);
-        const params = batch.map(id => `records[]=${id}`).join('&');
-        await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE}?${params}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
-        });
-      }
-
-      await fetchSpotCount();
-      showAdminStatus('phase cleared.', false);
-    } catch(e) {
-      showAdminStatus('clear failed', true);
-    }
-  }
-
-  function showAdminStatus(msg, isErr) {
-    const el = document.getElementById('adminStatus');
-    el.textContent = msg;
-    el.className = 'admin-status show' + (isErr ? ' err' : '');
-  }
-
-  init();
+init();
 </script>
 </body>
 </html>
