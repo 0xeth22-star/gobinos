@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Gobinos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -604,6 +606,8 @@ function validateAndStart(){
     var t=localStorage.getItem('gobHandle');
     if(w && t && /^0x[a-fA-F0-9]{40}$/.test(w)){
       playerWallet=w; playerHandle=t;
+      hasPlayed=true;
+      var _lb=document.getElementById('lbStartBtn'); if(_lb) _lb.style.display='block';
       // pre-fill but hide the fields, show "playing as" instead
       document.getElementById('startWallet').value=w;
       document.getElementById('startTwitter').value=t;
@@ -712,10 +716,18 @@ async function claimSpot(){
 }
 
 // ---- LEADERBOARD ----
+var lbRefreshTimer=null;
 function showLeaderboard(){
   document.getElementById('lbScreen').style.display='flex';
+  if(lbRefreshTimer) clearInterval(lbRefreshTimer);
+  lbRefreshTimer=setInterval(function(){
+    if(document.getElementById('lbScreen').style.display!=='none') loadLbData();
+    else { clearInterval(lbRefreshTimer); lbRefreshTimer=null; }
+  }, 15000);
+  loadLbData();
+}
+function loadLbData(){
   var list=document.getElementById('lbList');
-  list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.4);letter-spacing:2px;padding:12px 0;text-align:center;">loading...</div>';
   fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?sort[0][field]=Score&sort[0][direction]=desc&pageSize=20',{
     headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
   }).then(function(r){return r.json();}).then(function(d){
