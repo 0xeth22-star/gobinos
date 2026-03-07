@@ -57,9 +57,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
   <div class="overlay" id="winScreen" style="display:none">
     <div class="card">
       <div class="o-title">gm goblin</div>
-      <div class="o-sub">you survived. drop your wallet.</div>
-      <input class="o-input" id="winWallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
-      <input class="o-input" id="winTwitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
+      <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim my spot</button>
       <button class="o-btn red" onclick="restartGame()">play again</button>
@@ -151,7 +149,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
   </div>
 
   <!-- Pause button (visible during game) -->
-  <button id="pauseBtn" onclick="togglePause()" style="display:none;position:absolute;top:10px;right:10px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;">II</button>
+  <button id="pauseBtn" style="display:none;position:absolute;top:10px;right:10px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;">II</button>
 
   <!-- Persistent admin trigger — always visible, bottom-right corner -->
   <div id="adminTrigger" onclick="adminTap()" style="position:fixed;bottom:0;right:0;width:48px;height:48px;z-index:200;cursor:default;-webkit-tap-highlight-color:transparent;"></div>
@@ -213,6 +211,14 @@ function scaleX(cx){
 function clampGoblin(x){
   return Math.max(LANE_X+22, Math.min(LANE_X+LANE_W-22, x));
 }
+
+// pause button — separate handlers to avoid double-fire on mobile
+document.getElementById('pauseBtn').addEventListener('touchend', function(e){
+  e.preventDefault(); e.stopPropagation(); togglePause();
+},{passive:false});
+document.getElementById('pauseBtn').addEventListener('click', function(e){
+  if(e._fromTouch) return; togglePause();
+});
 
 // ---- INPUT ----
 document.addEventListener('keydown', function(e){ keys[e.key]=true; });
@@ -808,19 +814,6 @@ function checkAdminPass(){
     document.getElementById('adminPassErr').style.display='block';
   }
 }
-function saveAdminScore(){
-  var v=parseInt(document.getElementById('adminScore').value)||500;
-  WIN_SCORE=v;
-  // save to airtable config
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
-    var method='POST', url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
-    var body={fields:{Name:'WinScore',Value:String(v)}};
-    if(d.records&&d.records.length){method='PATCH';url+='/'+d.records[0].id;delete body.fields.Name;}
-    return fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  }).then(function(){alert('win score set to '+v);}).catch(function(){alert('saved locally only');});
-}
 function setChecker(val){
   checkerEnabled=!!val;
   document.getElementById('checkerOnBtn').style.opacity=val?'1':'0.4';
@@ -848,32 +841,7 @@ function exportWallets(){
     a.download='gobinos-wallets.txt'; a.click();
   }).catch(function(){alert('export failed');});
 }
-function importWallets(input){
-  var file=input.files[0]; if(!file) return;
-  var status=document.getElementById('importStatus');
-  status.textContent='reading...';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var lines=e.target.result.split('\n').map(function(l){return l.trim();}).filter(function(l){return /^0x[a-fA-F0-9]{40}$/.test(l);});
-    if(!lines.length){status.textContent='no valid wallets found';return;}
-    status.textContent='importing '+lines.length+' wallets...';
-    var done=0, failed=0;
-    var post=function(wallet){
-      var body={fields:{Twitter:'collab',Wallet:wallet}};
-      var p1=fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
-      var p2=fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
-      return Promise.all([p1,p2]).then(function(){done++;}).catch(function(){failed++;});
-    };
-    // batch with delay to avoid rate limit
-    var i=0;
-    var next=function(){
-      if(i>=lines.length){status.textContent='done. '+done+' imported, '+failed+' failed.';return;}
-      post(lines[i++]).then(function(){setTimeout(next,250);});
-    };
-    next();
-  };
-  reader.readAsText(file);
-}
+// importWallets (old file version removed)
 
 // ---- ADMIN FUNCTIONS ----
 async function exportWallets(type){
@@ -993,7 +961,19 @@ function checkWallet(){
   });
 }
 
-// init
+// init — load WIN_SCORE from config
+(function(){
+  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{
+    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.records&&d.records.length){
+      var v=parseInt(d.records[0].fields.Value);
+      if(v>0) WIN_SCORE=v;
+      var el=document.getElementById('adminScore');
+      if(el) el.value=WIN_SCORE;
+    }
+  }).catch(function(){});
+})();
 drawBG();
 </script>
 </body>
