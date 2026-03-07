@@ -34,7 +34,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     <div class="card">
       <div class="o-title">GOBINOS</div>
       <div class="badge">slash or die</div>
-      <div class="o-sub">zombie mosquitos dropping from above<br>hold + drag to move and shoot<br>500 kills = guaranteed goblist spot</div>
+      <div class="o-sub" style="margin-bottom:8px;">goblins only. no rules.</div><div class="badge" style="margin-bottom:20px;">500 kills = goblist spot</div>
       <button class="o-btn" onclick="startGame()">enter the trenches</button>
     </div>
   </div>
@@ -56,12 +56,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim my spot</button>
       <button class="o-btn red" onclick="restartGame()">play again</button>
-      <div style="margin-top:16px;border-top:1px solid rgba(107,143,62,.15);padding-top:12px;">
-        <div class="admin-label">WIN SCORE (admin)</div>
-        <input class="o-input" id="scoreInput" value="500" style="margin-bottom:0;" oninput="WIN_SCORE=parseInt(this.value)||500">
-      </div>
+
     </div>
   </div>
+  <!-- Pause -->
+  <div class="overlay" id="pauseScreen" style="display:none">
+    <div class="card">
+      <div class="o-title" style="font-size:1.6rem">paused</div>
+      <div class="o-sub" style="margin-bottom:12px;" id="pauseScore"></div>
+      <button class="o-btn" onclick="resumeGame()">resume</button>
+      <button class="o-btn red" onclick="restartGame()">restart</button>
+    </div>
+  </div>
+
+  <!-- Admin panel — triple-tap score to open -->
+  <div class="overlay" id="adminScreen" style="display:none">
+    <div class="card">
+      <div class="o-title" style="font-size:1.4rem;color:rgba(74,222,128,.6)">admin</div>
+      <div class="admin-label" style="margin-top:8px;">WIN SCORE</div>
+      <input class="o-input" id="adminScore" value="500" oninput="WIN_SCORE=parseInt(this.value)||500">
+      <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'">close</button>
+    </div>
+  </div>
+
+  <!-- Pause button (visible during game) -->
+  <button id="pauseBtn" onclick="togglePause()" style="display:none;position:absolute;top:8px;right:8px;z-index:40;background:rgba(0,0,0,0.5);border:1px solid rgba(74,222,128,0.3);border-radius:4px;color:#4ade80;font-size:1rem;padding:6px 10px;cursor:pointer;font-family:monospace;">⏸</button>
 </div>
 
 <script>
@@ -100,7 +119,17 @@ var enemies=[], projectiles=[], particles=[], missTexts=[];
 var spawnTimer=0, waveTimer=0, lastTime=0;
 var goblinAnim=0, hitFlash=0;
 var keys={};
-var touchHeld=false, touchStartX=0, touchStartTime=0, autoShootTimer=0;
+var touchHeld=false, touchStartX=0, touchStartTime=0;
+var autoShootInterval=null;
+var gamePaused=false;
+
+function startAutoShoot(){
+  if(autoShootInterval) return;
+  autoShootInterval=setInterval(function(){ if(gameRunning&&!gamePaused) shoot(); },80);
+}
+function stopAutoShoot(){
+  if(autoShootInterval){ clearInterval(autoShootInterval); autoShootInterval=null; }
+}
 
 // ---- HELPERS ----
 function scaleX(cx){
@@ -119,7 +148,7 @@ canvas.addEventListener('touchstart', function(e){
   e.preventDefault();
   var tx=scaleX(e.touches[0].clientX);
   touchStartX=tx; touchStartTime=Date.now(); touchHeld=true;
-  if(gameRunning) GOBLIN_X=clampGoblin(tx);
+  if(gameRunning){ GOBLIN_X=clampGoblin(tx); startAutoShoot(); }
 },{passive:false});
 
 canvas.addEventListener('touchmove', function(e){
@@ -129,7 +158,7 @@ canvas.addEventListener('touchmove', function(e){
 },{passive:false});
 
 canvas.addEventListener('touchend', function(e){
-  e.preventDefault(); touchHeld=false;
+  e.preventDefault(); touchHeld=false; stopAutoShoot();
   if(!gameRunning) return;
   var tx=scaleX(e.changedTouches[0].clientX);
   var moved=Math.abs(tx-touchStartX);
@@ -307,12 +336,6 @@ function gameLoop(ts){
   goblinAnim+=dt*3;
   if(hitFlash>0) hitFlash-=dt;
 
-  // auto-shoot while finger held
-  if(touchHeld){
-    var now=Date.now();
-    if(now-autoShootTimer>80){ autoShootTimer=now; shoot(); }
-  }
-
   // keyboard
   var spd=GW*0.55*dt;
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
@@ -429,12 +452,55 @@ function gameLoop(ts){
 }
 
 // ---- GAME CONTROL ----
+// triple-tap score to open admin
+var scoreTapCount=0, scoreTapTimer=null;
+function scoreTapped(){
+  scoreTapCount++;
+  if(scoreTapTimer) clearTimeout(scoreTapTimer);
+  scoreTapTimer=setTimeout(function(){ scoreTapCount=0; },600);
+  if(scoreTapCount>=3){
+    scoreTapCount=0;
+    document.getElementById('adminScreen').style.display='flex';
+  }
+}
+
+// tap score area (bottom center of canvas)
+canvas.addEventListener('click', function(e){
+  var r=canvas.getBoundingClientRect();
+  var cy=(e.clientY-r.top)*(canvas.height/r.height);
+  if(cy>GH*0.88) scoreTapped();
+}, true);
+canvas.addEventListener('touchend', function(e){
+  var r=canvas.getBoundingClientRect();
+  var cy=(e.changedTouches[0].clientY-r.top)*(canvas.height/r.height);
+  if(cy>GH*0.88) scoreTapped();
+}, true);
+
+function togglePause(){
+  if(!gameRunning && !gamePaused) return;
+  if(gamePaused){ resumeGame(); } else { pauseGame(); }
+}
+function pauseGame(){
+  gamePaused=true; gameRunning=false; stopAutoShoot();
+  document.getElementById('pauseScore').textContent=score+' kills so far';
+  document.getElementById('pauseScreen').style.display='flex';
+  document.getElementById('pauseBtn').textContent='▶';
+}
+function resumeGame(){
+  document.getElementById('pauseScreen').style.display='none';
+  gamePaused=false; gameRunning=true;
+  document.getElementById('pauseBtn').textContent='⏸';
+  lastTime=performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
 function startGame(){
   document.getElementById('startScreen').style.display='none';
+  document.getElementById('pauseBtn').style.display='block';
   score=0; wave=1; lives=3;
-  GOBLIN_X=GW/2;
+  GOBLIN_X=GW/2; gamePaused=false;
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
-  spawnTimer=0; waveTimer=0; touchHeld=false;
+  spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
   gameRunning=true;
   lastTime=performance.now();
   requestAnimationFrame(gameLoop);
@@ -442,15 +508,18 @@ function startGame(){
 function restartGame(){
   document.getElementById('deadScreen').style.display='none';
   document.getElementById('winScreen').style.display='none';
+  document.getElementById('pauseScreen').style.display='none';
   startGame();
 }
 function gameOver(){
-  gameRunning=false;
+  gameRunning=false; stopAutoShoot();
+  document.getElementById('pauseBtn').style.display='none';
   document.getElementById('deadSub').textContent=score+' kills. mosquitos won.';
   document.getElementById('deadScreen').style.display='flex';
 }
 function winGame(){
-  gameRunning=false;
+  gameRunning=false; stopAutoShoot();
+  document.getElementById('pauseBtn').style.display='none';
   document.getElementById('winScreen').style.display='flex';
 }
 async function claimSpot(){
