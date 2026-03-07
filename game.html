@@ -625,6 +625,8 @@ function validateAndStart(){
 function clearPlayer(){
   try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); } catch(e){}
   playerWallet=''; playerHandle='';
+  hasPlayed=false;
+  var lb=document.getElementById('lbStartBtn'); if(lb) lb.style.display='none';
   document.getElementById('startWallet').style.display='block';
   document.getElementById('startTwitter').style.display='block';
   var ri=document.getElementById('returningInfo');
