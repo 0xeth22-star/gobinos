@@ -328,25 +328,57 @@ function drawStartBG(){
 }
 
 // ---- INPUT ----
-let shootTimer=0;
-const SHOOT_RATE=0.28;
+let touchStartX=null, touchStartTime=0;
+let goblinTargetX=null;
+const keys={};
 
-function handleTap(tx, ty){
-  if(!gameRunning) return;
-  // shoot from goblin toward tap x pos
-  const sx=Math.max(LANE_X+6, Math.min(LANE_X+LANE_W-6, tx));
-  projectiles.push(new Projectile(GOBLIN_X, GOBLIN_Y-Math.round(GH*0.065)));
-}
+document.addEventListener('keydown', e=>{ keys[e.key]=true; });
+document.addEventListener('keyup', e=>{ keys[e.key]=false; });
 
-canvas.addEventListener('click', e=>{
-  const rect=canvas.getBoundingClientRect();
-  handleTap(e.clientX-rect.left, e.clientY-rect.top);
-});
+// tap = shoot, drag = move
 canvas.addEventListener('touchstart', e=>{
   e.preventDefault();
   const rect=canvas.getBoundingClientRect();
-  handleTap(e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top);
+  touchStartX=e.touches[0].clientX-rect.left;
+  touchStartTime=Date.now();
 },{passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(!gameRunning) return;
+  const rect=canvas.getBoundingClientRect();
+  const tx=e.touches[0].clientX-rect.left;
+  // drag goblin
+  GOBLIN_X=Math.max(LANE_X+20, Math.min(LANE_X+LANE_W-20, tx));
+},{passive:false});
+
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  if(!gameRunning) return;
+  const rect=canvas.getBoundingClientRect();
+  const tx=e.changedTouches[0].clientX-rect.left;
+  const elapsed=Date.now()-touchStartTime;
+  const moved=Math.abs(tx-(touchStartX||tx));
+  // short tap = shoot
+  if(elapsed<250 && moved<20){
+    projectiles.push(new Projectile(GOBLIN_X, GOBLIN_Y-Math.round(GH*0.065)));
+  }
+},{passive:false});
+
+// desktop: click to shoot, arrow keys / mouse to move
+canvas.addEventListener('click', e=>{
+  if(!gameRunning) return;
+  projectiles.push(new Projectile(GOBLIN_X, GOBLIN_Y-Math.round(GH*0.065)));
+});
+
+canvas.addEventListener('mousemove', e=>{
+  if(!gameRunning) return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  if(mx>LANE_X && mx<LANE_X+LANE_W){
+    GOBLIN_X=mx;
+  }
+});
 
 // ---- GAME LOOP ----
 function gameLoop(ts){
@@ -356,6 +388,20 @@ function gameLoop(ts){
 
   goblinAnim+=dt*3;
   if(hitFlash>0) hitFlash-=dt;
+
+  // keyboard movement
+  const moveSpd=GW*0.6*dt;
+  if(keys['ArrowLeft']||keys['a']||keys['A']){
+    GOBLIN_X=Math.max(LANE_X+20, GOBLIN_X-moveSpd);
+  }
+  if(keys['ArrowRight']||keys['d']||keys['D']){
+    GOBLIN_X=Math.min(LANE_X+LANE_W-20, GOBLIN_X+moveSpd);
+  }
+  // spacebar shoot
+  if(keys[' ']){
+    if(!keys._spaceWas) projectiles.push(new Projectile(GOBLIN_X, GOBLIN_Y-Math.round(GH*0.065)));
+    keys._spaceWas=true;
+  } else { keys._spaceWas=false; }
 
   // spawn
   const rate=Math.max(0.3, 1.8-wave*0.12);
