@@ -343,13 +343,19 @@ canvas.addEventListener('touchstart', e=>{
   touchStartTime=Date.now();
 },{passive:false});
 
+let autoShootTimer=0;
 canvas.addEventListener('touchmove', e=>{
   e.preventDefault();
   if(!gameRunning) return;
   const rect=canvas.getBoundingClientRect();
   const tx=e.touches[0].clientX-rect.left;
-  // drag goblin
   GOBLIN_X=Math.max(LANE_X+20, Math.min(LANE_X+LANE_W-20, tx));
+  // auto shoot while dragging
+  const now=Date.now();
+  if(now-autoShootTimer>220){
+    autoShootTimer=now;
+    projectiles.push(new Projectile(GOBLIN_X, GOBLIN_Y-Math.round(GH*0.065)));
+  }
 },{passive:false});
 
 canvas.addEventListener('touchend', e=>{
