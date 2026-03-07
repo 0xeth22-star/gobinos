@@ -33,9 +33,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
   <div class="overlay" id="startScreen">
     <div class="card">
       <div class="o-title">GOBINOS</div>
-      <div class="badge">slash or die</div>
-      <div class="o-sub" style="margin-bottom:8px;">goblins only no rules</div>
-      <button class="o-btn" onclick="startGame()">enter the trenches</button>
+      <div class="o-sub" style="margin-bottom:16px;">goblins only no rules</div>
+      <input class="o-input" id="startWallet" placeholder="0x... wallet" maxlength="42" autocomplete="off" spellcheck="false">
+      <input class="o-input" id="startTwitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
+      <div class="o-err" id="startErr"></div>
+      <button class="o-btn" onclick="validateAndStart()">enter the trenches</button>
+      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">☠ leaderboard</button>
     </div>
   </div>
 
@@ -44,6 +47,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-title" style="color:#cc2200">ngmi</div>
       <div class="o-sub" id="deadSub"></div>
       <button class="o-btn" onclick="restartGame()">try again</button>
+      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">☠ leaderboard</button>
     </div>
   </div>
 
@@ -69,13 +73,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
+  <!-- Leaderboard -->
+  <div class="overlay" id="lbScreen" style="display:none">
+    <div class="card" style="max-width:360px;max-height:85vh;overflow-y:auto;">
+      <div class="o-title" style="font-size:1.5rem;margin-bottom:4px;">leaderboard</div>
+      <div style="font-size:.45rem;color:rgba(74,222,128,.4);letter-spacing:3px;margin-bottom:18px;">TOP GOBLINS</div>
+      <div id="lbList" style="text-align:left;"></div>
+      <button class="o-btn" onclick="document.getElementById('lbScreen').style.display='none'" style="margin-top:16px;font-size:.8rem;padding:10px;">back</button>
+    </div>
+  </div>
+
   <!-- Admin panel — triple-tap score to open -->
   <div class="overlay" id="adminScreen" style="display:none">
     <div class="card">
       <div class="o-title" style="font-size:1.4rem;color:rgba(74,222,128,.6)">admin</div>
       <div class="admin-label" style="margin-top:8px;">WIN SCORE</div>
-      <input class="o-input" id="adminScore" value="500" oninput="WIN_SCORE=parseInt(this.value)||500">
-      <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'">close</button>
+      <input class="o-input" id="adminScore" value="500">
+      <button class="o-btn" onclick="saveAdminScore()">save global</button>
+      <button class="o-btn red" onclick="document.getElementById('adminScreen').style.display='none'">close</button>
     </div>
   </div>
 
@@ -89,7 +104,9 @@ var AIRTABLE_KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb24
 var BASE='appRp0o1yWMEMrhbO';
 var TABLE='tblJTJZVtJS57rkGt';
 var MASTERLIST='tblP9izXvEOZj29Gz';
+var CONFIG_TABLE='tblAMYHI1S6OTihNO';
 var WIN_SCORE=500;
+var playerWallet='', playerHandle='';
 
 // ---- CANVAS SETUP ----
 var canvas=document.getElementById('gameCanvas');
@@ -125,7 +142,7 @@ var gamePaused=false;
 
 function startAutoShoot(){
   if(autoShootInterval) return;
-  autoShootInterval=setInterval(function(){ if(gameRunning&&!gamePaused) shoot(); },150);
+  autoShootInterval=setInterval(function(){ if(gameRunning&&!gamePaused) shoot(); },280);
 }
 function stopAutoShoot(){
   if(autoShootInterval){ clearInterval(autoShootInterval); autoShootInterval=null; }
@@ -492,14 +509,68 @@ function pauseGame(){
   gamePaused=true; gameRunning=false; stopAutoShoot();
   document.getElementById('pauseScore').textContent=score+' kills so far';
   document.getElementById('pauseScreen').style.display='flex';
-  document.getElementById('pauseBtn').textContent='▶';
+  document.getElementById('pauseBtn').textContent='GO';
 }
 function resumeGame(){
   document.getElementById('pauseScreen').style.display='none';
   gamePaused=false; gameRunning=true;
-  document.getElementById('pauseBtn').textContent='⏸';
+  document.getElementById('pauseBtn').textContent='II';
   lastTime=performance.now();
   requestAnimationFrame(gameLoop);
+}
+
+function validateAndStart(){
+  var w=document.getElementById('startWallet').value.trim();
+  var t=document.getElementById('startTwitter').value.trim();
+  var err=document.getElementById('startErr');
+  err.style.display='none';
+  document.getElementById('startWallet').classList.remove('err');
+  document.getElementById('startTwitter').classList.remove('err');
+  if(!/^0x[a-fA-F0-9]{40}$/.test(w)){
+    document.getElementById('startWallet').classList.add('err');
+    err.textContent='enter a valid wallet'; err.style.display='block'; return;
+  }
+  if(!t){
+    document.getElementById('startTwitter').classList.add('err');
+    err.textContent='drop your handle'; err.style.display='block'; return;
+  }
+  playerWallet=w; playerHandle=t;
+  // remember for next time
+  try{ localStorage.setItem('gobWallet',w); localStorage.setItem('gobHandle',t); } catch(e){}
+  startGame();
+}
+
+// on load - check if returning user, skip form if already have wallet
+(function(){
+  try{
+    var w=localStorage.getItem('gobWallet');
+    var t=localStorage.getItem('gobHandle');
+    if(w && t && /^0x[a-fA-F0-9]{40}$/.test(w)){
+      playerWallet=w; playerHandle=t;
+      // pre-fill but hide the fields, show "playing as" instead
+      document.getElementById('startWallet').value=w;
+      document.getElementById('startTwitter').value=t;
+      var card=document.querySelector('#startScreen .card');
+      var info=document.createElement('div');
+      info.id='returningInfo';
+      info.style='font-size:.52rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-bottom:12px;';
+      info.innerHTML='playing as <span style="color:rgba(74,222,128,.8);">'+escHtml(t)+'</span> · <a onclick="clearPlayer()" style="color:rgba(204,34,0,.6);cursor:pointer;text-decoration:underline;">not you?</a>';
+      // hide inputs, show info
+      document.getElementById('startWallet').style.display='none';
+      document.getElementById('startTwitter').style.display='none';
+      document.getElementById('startErr').style.display='none';
+      card.insertBefore(info, document.getElementById('startWallet'));
+    }
+  } catch(e){}
+})();
+
+function clearPlayer(){
+  try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); } catch(e){}
+  playerWallet=''; playerHandle='';
+  document.getElementById('startWallet').style.display='block';
+  document.getElementById('startTwitter').style.display='block';
+  var ri=document.getElementById('returningInfo');
+  if(ri) ri.remove();
 }
 
 function startGame(){
@@ -517,48 +588,112 @@ function restartGame(){
   document.getElementById('deadScreen').style.display='none';
   document.getElementById('winScreen').style.display='none';
   document.getElementById('pauseScreen').style.display='none';
-  startGame();
+  document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('startScreen').style.display='flex';
+  gameRunning=false; gamePaused=false; stopAutoShoot();
 }
 function gameOver(){
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('deadSub').textContent=score+' kills. mosquitos won.';
+  document.getElementById('deadSub').textContent=score+' kills mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
+  // submit score to leaderboard
+  if(playerWallet && playerHandle){
+    fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
+    }).catch(function(){});
+  }
 }
 function winGame(){
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('winInfo').textContent=playerHandle+' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4);
   document.getElementById('winScreen').style.display='flex';
 }
 async function claimSpot(){
-  var wallet=document.getElementById('winWallet').value.trim();
-  var twitter=document.getElementById('winTwitter').value.trim();
-  var err=document.getElementById('winErr');
   var btn=document.getElementById('claimBtn');
-  err.style.display='none';
-  document.getElementById('winWallet').classList.remove('err');
-  document.getElementById('winTwitter').classList.remove('err');
-  if(!/^0x[a-fA-F0-9]{40}$/.test(wallet)){
-    document.getElementById('winWallet').classList.add('err');
-    err.textContent='enter a valid wallet'; err.style.display='block'; return;
-  }
-  if(!twitter){
-    document.getElementById('winTwitter').classList.add('err');
-    err.textContent='drop your handle'; err.style.display='block'; return;
-  }
+  var err=document.getElementById('winErr');
   btn.disabled=true; btn.textContent='locking in...';
   var post=function(t){
     return fetch('https://api.airtable.com/v0/'+BASE+'/'+t,{
       method:'POST',
       headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({fields:{Twitter:twitter,Wallet:wallet}})
+      body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
     });
   };
   try{
     await post(TABLE); await post(MASTERLIST);
-    btn.textContent='ur in goblin 🧌';
+    btn.textContent='ur in goblin ☠';
     btn.style.background='rgba(42,92,42,0.8)';
   } catch(e){ btn.disabled=false; btn.textContent='broke — try again'; }
+}
+
+// ---- LEADERBOARD ----
+function showLeaderboard(){
+  document.getElementById('lbScreen').style.display='flex';
+  var list=document.getElementById('lbList');
+  list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.4);letter-spacing:2px;padding:12px 0;text-align:center;">loading...</div>';
+  fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?sort[0][field]=Score&sort[0][direction]=desc&pageSize=20',{
+    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.records||!d.records.length){
+      list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>';
+      return;
+    }
+    // dedupe by wallet, keep highest score
+    var seen={}, top=[];
+    for(var i=0;i<d.records.length;i++){
+      var r=d.records[i].fields;
+      if(!r.Wallet) continue;
+      var w=r.Wallet.toLowerCase();
+      if(!seen[w]||(r.Score||0)>seen[w].score){
+        seen[w]={handle:r.Twitter||'anon',wallet:r.Wallet,score:r.Score||0};
+      }
+    }
+    for(var k in seen) top.push(seen[k]);
+    top.sort(function(a,b){return b.score-a.score;});
+    top=top.slice(0,10);
+
+    var medals=['[1]','[2]','[3]'];
+    var out='';
+    for(var i=0;i<top.length;i++){
+      var p=top[i];
+      var rank=medals[i]||(i+1);
+      var isTop=i<3;
+      out+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid rgba(74,222,128,0.08);'+(isTop?'background:rgba(74,222,128,0.04);border-radius:4px;':'')+'">'+
+        '<div style="display:flex;align-items:center;gap:10px;">'+
+          '<span style="font-size:'+(isTop?'.9':'0.75')+'rem;min-width:24px;">'+rank+'</span>'+
+          '<div>'+
+            '<div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.handle)+'</div>'+
+            '<div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;">'+p.wallet.slice(0,6)+'...'+p.wallet.slice(-4)+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+p.score+' kills</div>'+
+      '</div>';
+    }
+    list.innerHTML=out;
+  }).catch(function(){
+    list.innerHTML='<div style="font-size:.55rem;color:#cc2200;text-align:center;padding:20px;">failed to load</div>';
+  });
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function saveAdminScore(){
+  var v=parseInt(document.getElementById('adminScore').value)||500;
+  WIN_SCORE=v;
+  // upsert to config table
+  try{
+    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
+    var d=await r.json();
+    var method='POST', url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
+    var body={fields:{Name:'WinScore',Value:String(v)}};
+    if(d.records&&d.records.length){ method='PATCH'; url+='/'+d.records[0].id; }
+    await fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    document.getElementById('adminScreen').style.display='none';
+    alert('saved! win score = '+v);
+  } catch(e){ alert('failed to save'); }
 }
 
 // init
