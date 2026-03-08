@@ -1015,7 +1015,7 @@ async function saveAdminScore(){
   }catch(e){ alert('failed to save'); }
 }
 
-var ADMIN_HASH='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // sha256 of 'gobinos2024'
+var ADMIN_HASH='826b79eea26e04ce7f23027685741a6b089a12c7a86cb7c2c516183cacd644d7'; // sha256 of 'gobinos2024'
 async function hashStr(s){
   var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
