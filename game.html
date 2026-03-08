@@ -59,9 +59,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-title" style="color:#cc2200">ngmi</div>
       <div class="o-sub" id="deadSub"></div>
       <button class="o-btn" onclick="restartGame()">try again</button>
-      <button class="o-btn" onclick="shareScore('lose')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.15);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(232,220,200,0.5);">post on 𝕏</button>
-      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">leaderboard</button>
-      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="o-btn" onclick="shareScore('lose')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.12);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.45);">post on 𝕏</button>
+        <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.06);border-color:rgba(74,222,128,0.2);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(74,222,128,0.65);">board</button>
+        <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.15);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.25);">menu</button>
+      </div>
     </div>
   </div>
 
@@ -71,9 +73,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim GTD spot</button>
-      <button class="o-btn" onclick="shareScore('win')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.15);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(232,220,200,0.5);">post on 𝕏</button>
-      <button class="o-btn red" onclick="restartGame()">play again</button>
-      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="o-btn" onclick="shareScore('win')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.12);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.45);">post on 𝕏</button>
+        <button class="o-btn red" onclick="restartGame()" style="font-size:.68rem;padding:9px;letter-spacing:1px;">again</button>
+        <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.15);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.25);">menu</button>
+      </div>
     </div>
   </div>
 
@@ -170,17 +174,18 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 </div>
 
 <script>
-// ---- CONSTANTS ----
-var AIRTABLE_KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
-var BASE='appRp0o1yWMEMrhbO';
-var TABLE='tblJTJZVtJS57rkGt';
-var MASTERLIST='tblP9izXvEOZj29Gz';
-var LEADERBOARD='tblOP5T8DCMDeV3Re';
-var CONFIG_TABLE='tblAMYHI1S6OTihNO';
+// ---- SUPABASE ----
+var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
+function sbH(extra){ return Object.assign({'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},extra||{}); }
+function sbGet(t,qs){ return fetch(SB+'/'+t+(qs?'?'+qs:''),{headers:sbH()}).then(function(r){return r.json();}); }
+function sbPost(t,body,prefer){ return fetch(SB+'/'+t,{method:'POST',headers:sbH({'Prefer':prefer||'return=representation'}),body:JSON.stringify(body)}).then(function(r){return r.json();}); }
+function sbPatch(t,qs,body){ return fetch(SB+'/'+t+'?'+qs,{method:'PATCH',headers:sbH({'Prefer':'return=representation'}),body:JSON.stringify(body)}).then(function(r){return r.json();}); }
+function sbDelete(t,qs){ return fetch(SB+'/'+t+'?'+qs,{method:'DELETE',headers:sbH()}); }
+
 var WIN_SCORE=500;
 var playerWallet='', playerHandle='';
-var SESSION_TOKEN=null;
-var WORKER_URL='https://gobinos-api.vercel.app';
+var GTD_CAP=500;
 
 // ---- SOUND SYSTEM ----
 var _audioCtx=null;
@@ -397,20 +402,8 @@ async function checkCapAndClaim(){
   var btn=document.getElementById('claimBtn');
   btn.disabled=true; btn.textContent='checking spots...';
   try{
-    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=1',{
-      headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-    });
-    var d=await r.json();
-    // airtable doesn't return total count directly, fetch all to count
-    var allIds=[],offset='';
-    do{
-      var u='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100&fields[]=Wallet'+(offset?'&offset='+offset:'');
-      var rr=await fetch(u,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-      var dd=await rr.json();
-      allIds=allIds.concat(dd.records||[]);
-      offset=dd.offset||'';
-    }while(offset);
-    if(allIds.length>=GTD_CAP){
+    var d=await sbGet('allowlist','select=id');
+    if(d&&d.length>=GTD_CAP){
       btn.textContent='spots gone ser';
       btn.style.background='rgba(80,0,0,0.5)';
       return;
@@ -419,7 +412,7 @@ async function checkCapAndClaim(){
   }catch(e){
     btn.disabled=false;
     btn.textContent='claim GTD spot';
-    claimSpot(); // fallback: let them claim if check fails
+    claimSpot();
   }
 }
 
@@ -862,14 +855,7 @@ function startGame(){
   GOBLIN_X=GW/2; gamePaused=false;
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
-  SESSION_TOKEN=null;
-  fetch(WORKER_URL+'/api/start',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({wallet:playerWallet,handle:playerHandle})
-  }).then(function(r){return r.json();}).then(function(d){
-    SESSION_TOKEN=d.token||null;
-  }).catch(function(){});
+  try{ localStorage.setItem('gobLastPlay_'+playerWallet.toLowerCase(),Date.now()); }catch(e){}
   gameRunning=true;
   lastTime=performance.now();
   startBgMusic();
@@ -916,10 +902,13 @@ function gameOver(){
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver();
   stopBgMusic();
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
+  // upsert leaderboard — only update if new score beats existing
+  sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score').then(function(d){
+    if(d&&d.length){
+      if(score>d[0].score) sbPatch('leaderboard','id=eq.'+d[0].id,{score:score});
+    }else{
+      sbPost('leaderboard',{twitter:playerHandle,wallet:playerWallet,score:score});
+    }
   }).catch(function(){});
 }
 
@@ -939,17 +928,21 @@ function winGame(){
 
 async function claimSpot(){
   var btn=document.getElementById('claimBtn');
-  var err=document.getElementById('winErr');
   btn.disabled=true; btn.textContent='locking in...';
-  var post=function(t){
-    return fetch('https://api.airtable.com/v0/'+BASE+'/'+t,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
-    });
-  };
   try{
-    await post(TABLE); await post(MASTERLIST); await post(LEADERBOARD);
+    // bot limiter: one claim per wallet
+    var existing=await sbGet('allowlist','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id');
+    if(existing&&existing.length){
+      btn.textContent='already claimed ser';
+      btn.style.background='rgba(80,0,0,0.5)';
+      return;
+    }
+    await sbPost('allowlist',{twitter:playerHandle,wallet:playerWallet,score:score});
+    await sbPost('masterlist',{twitter:playerHandle,wallet:playerWallet});
+    // upsert leaderboard best score
+    var lb=await sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score');
+    if(lb&&lb.length){ if(score>lb[0].score) await sbPatch('leaderboard','id=eq.'+lb[0].id,{score:score}); }
+    else { await sbPost('leaderboard',{twitter:playerHandle,wallet:playerWallet,score:score}); }
     btn.textContent='ur GTD goblin 🧌';
     btn.style.background='rgba(42,92,42,0.8)';
     var pa=document.querySelector('#winScreen .o-btn.red'); if(pa) pa.style.display='none';
@@ -972,40 +965,27 @@ function showLeaderboard(){
 }
 function loadLbData(){
   var list=document.getElementById('lbList');
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?sort[0][field]=Score&sort[0][direction]=desc&pageSize=20',{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
-    if(!d.records||!d.records.length){
+  sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=10').then(function(d){
+    if(!d||!d.length){
       list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>';
       return;
     }
-    var seen={},top=[];
-    for(var i=0;i<d.records.length;i++){
-      var r=d.records[i].fields;
-      if(!r.Wallet) continue;
-      var w=r.Wallet.toLowerCase();
-      if(!seen[w]||(r.Score||0)>seen[w].score){
-        seen[w]={handle:r.Twitter||'anon',wallet:r.Wallet,score:r.Score||0};
-      }
-    }
-    for(var k in seen) top.push(seen[k]);
-    top.sort(function(a,b){return b.score-a.score;});
-    top=top.slice(0,10);
     var medals=['[1]','[2]','[3]'];
     var out='';
-    for(var i=0;i<top.length;i++){
-      var p=top[i];
+    for(var i=0;i<d.length;i++){
+      var p=d[i];
+      if(!p.wallet) continue;
       var rank=medals[i]||(i+1);
       var isTop=i<3;
       out+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid rgba(74,222,128,0.08);'+(isTop?'background:rgba(74,222,128,0.04);border-radius:4px;':'')+'">'+
         '<div style="display:flex;align-items:center;gap:10px;">'+
           '<span style="font-size:'+(isTop?'.9':'0.75')+'rem;min-width:24px;">'+rank+'</span>'+
           '<div>'+
-            '<div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.handle)+'</div>'+
+            '<div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.twitter||'anon')+'</div>'+
             '<div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;">'+p.wallet.slice(0,6)+'...'+p.wallet.slice(-4)+'</div>'+
           '</div>'+
         '</div>'+
-        '<div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+p.score+' kills</div>'+
+        '<div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+(p.score||0)+' kills</div>'+
       '</div>';
     }
     list.innerHTML=out;
@@ -1019,12 +999,7 @@ async function saveAdminCap(){
   var v=parseInt(document.getElementById('adminCap').value)||500;
   GTD_CAP=v;
   try{
-    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="GtdCap"',{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-    var d=await r.json();
-    var method='POST',url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
-    var body={fields:{Name:'GtdCap',Value:String(v)}};
-    if(d.records&&d.records.length){ method='PATCH'; url+='/'+d.records[0].id; }
-    await fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    await sbPatch('config','name=eq.GtdCap',{value:String(v)});
     document.getElementById('adminScreen').style.display='none';
     alert('saved! gtd cap = '+v);
   }catch(e){ alert('failed to save'); }
@@ -1034,26 +1009,26 @@ async function saveAdminScore(){
   var v=parseInt(document.getElementById('adminScore').value)||500;
   WIN_SCORE=v;
   try{
-    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-    var d=await r.json();
-    var method='POST',url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
-    var body={fields:{Name:'WinScore',Value:String(v)}};
-    if(d.records&&d.records.length){ method='PATCH'; url+='/'+d.records[0].id; }
-    await fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    await sbPatch('config','name=eq.WinScore',{value:String(v)});
     document.getElementById('adminScreen').style.display='none';
     alert('saved! win score = '+v);
   }catch(e){ alert('failed to save'); }
 }
 
-var ADMIN_PASS='gobinos2024';
+var ADMIN_HASH='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // sha256 of 'gobinos2024'
+async function hashStr(s){
+  var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+}
 function openAdmin(){
   document.getElementById('adminLoginScreen').style.display='flex';
   document.getElementById('adminPass').value='';
   document.getElementById('adminPassErr').style.display='none';
 }
-function checkAdminPass(){
+async function checkAdminPass(){
   var p=document.getElementById('adminPass').value;
-  if(p===ADMIN_PASS){
+  var h=await hashStr(p);
+  if(h===ADMIN_HASH){
     document.getElementById('adminLoginScreen').style.display='none';
     document.getElementById('adminScreen').style.display='flex';
   }else{
@@ -1063,18 +1038,11 @@ function checkAdminPass(){
 }
 
 async function exportWallets(type){
-  var tbl=type==='masterlist'?MASTERLIST:TABLE;
-  var name=type==='masterlist'?'gobinos-masterlist':'gobinos-allowlist';
-  var allRecords=[],offset='';
+  var tbl=type==='masterlist'?'masterlist':'allowlist';
+  var name='gobinos-'+tbl;
   try{
-    do{
-      var url='https://api.airtable.com/v0/'+BASE+'/'+tbl+'?pageSize=100'+(offset?'&offset='+offset:'');
-      var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-      var d=await r.json();
-      allRecords=allRecords.concat(d.records||[]);
-      offset=d.offset||'';
-    }while(offset);
-    var lines=allRecords.filter(function(r){return r.fields.Wallet;}).map(function(r){return r.fields.Wallet;});
+    var d=await sbGet(tbl,'select=wallet&limit=10000');
+    var lines=(d||[]).filter(function(r){return r.wallet;}).map(function(r){return r.wallet;});
     var blob=new Blob([lines.join('\n')],{type:'text/plain'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -1093,10 +1061,9 @@ async function importWallets(){
   status.textContent='importing '+wallets.length+' wallets...'; status.style.display='block';
   var ok=0;
   for(var i=0;i<wallets.length;i++){
-    var fields={Twitter:handle,Wallet:wallets[i]};
     try{
-      await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
-      await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
+      await sbPost('allowlist',{twitter:handle,wallet:wallets[i],score:0},'return=minimal');
+      await sbPost('masterlist',{twitter:handle,wallet:wallets[i]},'return=minimal');
       ok++;
     }catch(e){}
     if(i%10===0) status.textContent='importing... '+ok+'/'+wallets.length;
@@ -1109,38 +1076,20 @@ async function clearLeaderboard(){
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus');
   status.textContent='wiping...'; status.style.display='block';
-  var offset='',ids=[];
-  do{
-    var url='https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?pageSize=100'+(offset?'&offset='+offset:'');
-    var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-    var d=await r.json();
-    ids=ids.concat((d.records||[]).map(function(r){return r.id;}));
-    offset=d.offset||'';
-  }while(offset);
-  for(var i=0;i<ids.length;i+=10){
-    var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');
-    await fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-  }
-  status.textContent='leaderboard wiped. '+ids.length+' records gone.';
+  try{
+    await sbDelete('leaderboard','id=gt.0');
+    status.textContent='leaderboard wiped';
+  }catch(e){ status.textContent='failed'; }
 }
 
 async function clearPhase(){
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus');
   status.textContent='clearing...'; status.style.display='block';
-  var offset='',ids=[];
-  do{
-    var url='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100'+(offset?'&offset='+offset:'');
-    var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-    var d=await r.json();
-    ids=ids.concat((d.records||[]).map(function(r){return r.id;}));
-    offset=d.offset||'';
-  }while(offset);
-  for(var i=0;i<ids.length;i+=10){
-    var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');
-    await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
-  }
-  status.textContent='cleared! '+ids.length+' records deleted';
+  try{
+    await sbDelete('allowlist','id=gt.0');
+    status.textContent='cleared!';
+  }catch(e){ status.textContent='failed'; }
 }
 
 function checkWallet(){
@@ -1155,12 +1104,10 @@ function checkWallet(){
   }
   var btn=document.querySelector('#checkerScreen .o-btn');
   btn.textContent='checking...'; btn.disabled=true;
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST+'?filterByFormula=LOWER({Wallet})="'+w.toLowerCase()+'"',{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
+  sbGet('masterlist','wallet=ilike.'+encodeURIComponent(w)+'&select=id').then(function(d){
     btn.textContent='check'; btn.disabled=false;
     res.style.display='block';
-    if(d.records&&d.records.length){
+    if(d&&d.length){
       res.style.background='rgba(42,92,42,0.3)';
       res.style.border='1px solid rgba(74,222,128,0.4)';
       res.style.color='#4ade80';
@@ -1179,24 +1126,21 @@ function checkWallet(){
 
 // init: load config
 (function(){
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE,{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.records&&d.records.length){
-      d.records.forEach(function(rec){
-        var name=rec.fields.Name, val=parseInt(rec.fields.Value);
-        if(name==='WinScore'&&val>0){
-          WIN_SCORE=val;
-          var el=document.getElementById('adminScore');
-          if(el) el.value=WIN_SCORE;
-        }
-        if(name==='GtdCap'&&val>0){
-          GTD_CAP=val;
-          var el=document.getElementById('adminCap');
-          if(el) el.value=GTD_CAP;
-        }
-      });
-    }
+  sbGet('config','select=name,value').then(function(d){
+    if(!d||!d.length) return;
+    d.forEach(function(row){
+      var val=parseInt(row.value);
+      if(row.name==='WinScore'&&val>0){
+        WIN_SCORE=val;
+        var el=document.getElementById('adminScore');
+        if(el) el.value=WIN_SCORE;
+      }
+      if(row.name==='GtdCap'&&val>0){
+        GTD_CAP=val;
+        var el=document.getElementById('adminCap');
+        if(el) el.value=GTD_CAP;
+      }
+    });
   }).catch(function(){});
 })();
 drawBG();
