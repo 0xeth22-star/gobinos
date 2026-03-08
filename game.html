@@ -61,7 +61,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim my spot</button>
       <button class="o-btn red" onclick="restartGame()">play again</button>
-
+      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
     </div>
   </div>
   <!-- Pause -->
@@ -165,6 +165,8 @@ var LEADERBOARD='tblOP5T8DCMDeV3Re';
 var CONFIG_TABLE='tblAMYHI1S6OTihNO';
 var WIN_SCORE=500;
 var playerWallet='', playerHandle='';
+var SESSION_TOKEN=null;
+var WORKER_URL='https://gobinos-api.vercel.app'; // change to your vercel URL
 
 // ---- CANVAS SETUP ----
 var canvas=document.getElementById('gameCanvas');
@@ -650,6 +652,15 @@ function startGame(){
   GOBLIN_X=GW/2; gamePaused=false;
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
+  SESSION_TOKEN=null;
+  // get session token from worker
+  fetch(WORKER_URL+'/api/start',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({wallet:playerWallet, handle:playerHandle})
+  }).then(function(r){return r.json();}).then(function(d){
+    SESSION_TOKEN=d.token||null;
+  }).catch(function(){});
   gameRunning=true;
   lastTime=performance.now();
   requestAnimationFrame(gameLoop);
@@ -682,17 +693,12 @@ function gameOver(){
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('deadSub').textContent=score+' kills mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
-  // submit score to leaderboard
-  if(playerWallet && playerHandle){
-    fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{
+  // submit score via worker (validated server-side)
+  if(SESSION_TOKEN){
+    fetch(WORKER_URL+'/api/submit',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
-    }).catch(function(){});
-    fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:SESSION_TOKEN,score:score,handle:playerHandle,isWin:false})
     }).catch(function(){});
   }
 }
@@ -700,13 +706,18 @@ function winGame(){
   hasPlayed=true;
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('winInfo').textContent=playerHandle+' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4);
+  document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
+  var cb=document.getElementById('claimBtn');
+  cb.disabled=false; cb.textContent='claim my spot'; cb.style.background='';
+  document.getElementById('winErr').style.display='none';
   document.getElementById('winScreen').style.display='flex';
 }
 async function claimSpot(){
   var btn=document.getElementById('claimBtn');
   var err=document.getElementById('winErr');
   btn.disabled=true; btn.textContent='locking in...';
+
+  // direct airtable write (fallback until worker is live)
   var post=function(t){
     return fetch('https://api.airtable.com/v0/'+BASE+'/'+t,{
       method:'POST',
@@ -718,7 +729,10 @@ async function claimSpot(){
     await post(TABLE); await post(MASTERLIST); await post(LEADERBOARD);
     btn.textContent='ur in goblin ⚔';
     btn.style.background='rgba(42,92,42,0.8)';
-  } catch(e){ btn.disabled=false; btn.textContent='broke — try again'; }
+  } catch(e){
+    btn.disabled=false;
+    btn.textContent='broke — try again';
+  }
 }
 
 // ---- LEADERBOARD ----
@@ -814,33 +828,8 @@ function checkAdminPass(){
     document.getElementById('adminPassErr').style.display='block';
   }
 }
-function setChecker(val){
-  checkerEnabled=!!val;
-  document.getElementById('checkerOnBtn').style.opacity=val?'1':'0.4';
-  document.getElementById('checkerOffBtn').style.opacity=val?'0.4':'1';
-  // hide/show checker button on start screen
-  var cb=document.getElementById('checkerBtn');
-  if(cb) cb.style.display=val?'block':'none';
-  // save to config
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="Checker"',{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
-    var method='POST', url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
-    var body={fields:{Name:'Checker',Value:String(val)}};
-    if(d.records&&d.records.length){method='PATCH';url+='/'+d.records[0].id;delete body.fields.Name;}
-    return fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  }).catch(function(){});
-}
-function exportWallets(){
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100',{
-    headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
-  }).then(function(r){return r.json();}).then(function(d){
-    var wallets=d.records.map(function(r){return r.fields.Wallet||'';}).filter(Boolean).join('\n');
-    var a=document.createElement('a');
-    a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(wallets);
-    a.download='gobinos-wallets.txt'; a.click();
-  }).catch(function(){alert('export failed');});
-}
+
+
 // importWallets (old file version removed)
 
 // ---- ADMIN FUNCTIONS ----
