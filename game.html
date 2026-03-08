@@ -693,20 +693,21 @@ function gameOver(){
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('deadSub').textContent=score+' kills mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
-  // submit score via worker (validated server-side)
-  if(SESSION_TOKEN){
-    fetch(WORKER_URL+'/api/submit',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({token:SESSION_TOKEN,score:score,handle:playerHandle,isWin:false})
-    }).catch(function(){});
-  }
+  // write score to leaderboard
+  fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
+  }).catch(function(){});
 }
 function winGame(){
   hasPlayed=true;
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
+  var cb=document.getElementById('claimBtn');
+  cb.disabled=false; cb.textContent='claim my spot'; cb.style.background='';
+  document.getElementById('winErr').style.display='none';
   var cb=document.getElementById('claimBtn');
   cb.disabled=false; cb.textContent='claim my spot'; cb.style.background='';
   document.getElementById('winErr').style.display='none';
