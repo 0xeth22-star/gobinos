@@ -59,6 +59,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-title" style="color:#cc2200">ngmi</div>
       <div class="o-sub" id="deadSub"></div>
       <button class="o-btn" onclick="restartGame()">try again</button>
+      <button class="o-btn" onclick="shareScore('lose')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.15);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(232,220,200,0.5);">post on 𝕏</button>
       <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">leaderboard</button>
       <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
     </div>
@@ -70,6 +71,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim GTD spot</button>
+      <button class="o-btn" onclick="shareScore('win')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.15);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(232,220,200,0.5);">post on 𝕏</button>
       <button class="o-btn red" onclick="restartGame()">play again</button>
       <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
     </div>
@@ -124,6 +126,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="admin-label">WIN SCORE</div>
       <input class="o-input" id="adminScore" value="500" style="margin-bottom:6px;">
       <button class="o-btn" onclick="saveAdminScore()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
+
+      <div class="admin-label">GTD CAP</div>
+      <input class="o-input" id="adminCap" value="500" style="margin-bottom:6px;">
+      <button class="o-btn" onclick="saveAdminCap()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
 
       <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
         <div class="admin-label">EXPORT WALLETS</div>
@@ -189,6 +195,7 @@ function getACtx(){
 function toggleMute(){
   soundOn=!soundOn;
   document.getElementById('muteBtn').textContent=soundOn?'♩♩':'ø♩';
+  setBgMusicVol(soundOn);
 }
 
 // Gun / shoot: short sharp "pew"
@@ -312,6 +319,108 @@ function sndWin(){
       o.start(t); o.stop(t+0.8);
     });
   }catch(e){}
+}
+
+// ---- BG MUSIC ----
+var bgMusicNode=null, bgMusicGain=null, bgMusicStarted=false;
+
+function startBgMusic(){
+  if(bgMusicStarted||!soundOn) return;
+  try{
+    var c=getACtx();
+    bgMusicGain=c.createGain();
+    bgMusicGain.gain.value=0.07;
+    bgMusicGain.connect(c.destination);
+
+    // low drone
+    var drone=c.createOscillator();
+    drone.type='sine';
+    drone.frequency.value=55;
+    var droneG=c.createGain(); droneG.gain.value=0.6;
+    drone.connect(droneG); droneG.connect(bgMusicGain);
+    drone.start();
+
+    // mid pulse
+    var pulse=c.createOscillator();
+    pulse.type='triangle';
+    pulse.frequency.value=110;
+    var lfo=c.createOscillator(); lfo.frequency.value=0.4;
+    var lfoG=c.createGain(); lfoG.gain.value=0.3;
+    lfo.connect(lfoG); lfoG.connect(pulse.frequency);
+    var pulseG=c.createGain(); pulseG.gain.value=0.35;
+    pulse.connect(pulseG); pulseG.connect(bgMusicGain);
+    pulse.start(); lfo.start();
+
+    // high shimmer
+    var shimmer=c.createOscillator();
+    shimmer.type='sine';
+    shimmer.frequency.value=330;
+    var shimLfo=c.createOscillator(); shimLfo.frequency.value=0.15;
+    var shimLfoG=c.createGain(); shimLfoG.gain.value=8;
+    shimLfo.connect(shimLfoG); shimLfoG.connect(shimmer.frequency);
+    var shimG=c.createGain(); shimG.gain.value=0.12;
+    shimmer.connect(shimG); shimG.connect(bgMusicGain);
+    shimmer.start(); shimLfo.start();
+
+    bgMusicNode=[drone,pulse,lfo,shimmer,shimLfo];
+    bgMusicStarted=true;
+  }catch(e){}
+}
+
+function stopBgMusic(){
+  if(!bgMusicStarted) return;
+  try{
+    bgMusicNode.forEach(function(n){ try{n.stop();}catch(e){} });
+    bgMusicStarted=false;
+  }catch(e){}
+}
+
+function setBgMusicVol(on){
+  if(!bgMusicGain) return;
+  bgMusicGain.gain.value=on?0.07:0;
+}
+
+// ---- SHARE ----
+function shareScore(type){
+  var text;
+  if(type==='win'){
+    text=score+' kills GTD spot locked\n\ngobinos.wtf\n\n@gobinosoneth';
+  }else{
+    text=score+' kills mosquitos got me\n\nstill going back in\n\ngobinos.wtf\n\n@gobinosoneth';
+  }
+  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+}
+
+// ---- DISTRIBUTION CAP ----
+var GTD_CAP=500;
+async function checkCapAndClaim(){
+  var btn=document.getElementById('claimBtn');
+  btn.disabled=true; btn.textContent='checking spots...';
+  try{
+    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=1',{
+      headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
+    });
+    var d=await r.json();
+    // airtable doesn't return total count directly, fetch all to count
+    var allIds=[],offset='';
+    do{
+      var u='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100&fields[]=Wallet'+(offset?'&offset='+offset:'');
+      var rr=await fetch(u,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
+      var dd=await rr.json();
+      allIds=allIds.concat(dd.records||[]);
+      offset=dd.offset||'';
+    }while(offset);
+    if(allIds.length>=GTD_CAP){
+      btn.textContent='spots gone ser';
+      btn.style.background='rgba(80,0,0,0.5)';
+      return;
+    }
+    claimSpot();
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent='claim GTD spot';
+    claimSpot(); // fallback: let them claim if check fails
+  }
 }
 
 // ---- CANVAS SETUP ----
@@ -763,6 +872,7 @@ function startGame(){
   }).catch(function(){});
   gameRunning=true;
   lastTime=performance.now();
+  startBgMusic();
   requestAnimationFrame(gameLoop);
 }
 
@@ -805,6 +915,7 @@ function gameOver(){
   document.getElementById('deadSub').textContent=score+' kills. mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver();
+  stopBgMusic();
   fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
     method:'POST',
     headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
@@ -819,9 +930,11 @@ function winGame(){
   document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
   var cb=document.getElementById('claimBtn');
   cb.disabled=false; cb.textContent='claim GTD spot'; cb.style.background='';
+  cb.onclick=function(){ checkCapAndClaim(); };
   document.getElementById('winErr').style.display='none';
   document.getElementById('winScreen').style.display='flex';
   sndWin();
+  stopBgMusic();
 }
 
 async function claimSpot(){
@@ -901,6 +1014,21 @@ function loadLbData(){
   });
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function saveAdminCap(){
+  var v=parseInt(document.getElementById('adminCap').value)||500;
+  GTD_CAP=v;
+  try{
+    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="GtdCap"',{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
+    var d=await r.json();
+    var method='POST',url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
+    var body={fields:{Name:'GtdCap',Value:String(v)}};
+    if(d.records&&d.records.length){ method='PATCH'; url+='/'+d.records[0].id; }
+    await fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    document.getElementById('adminScreen').style.display='none';
+    alert('saved! gtd cap = '+v);
+  }catch(e){ alert('failed to save'); }
+}
 
 async function saveAdminScore(){
   var v=parseInt(document.getElementById('adminScore').value)||500;
@@ -1049,16 +1177,25 @@ function checkWallet(){
   });
 }
 
-// init: load WIN_SCORE from config
+// init: load config
 (function(){
-  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{
+  fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE,{
     headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
   }).then(function(r){return r.json();}).then(function(d){
     if(d.records&&d.records.length){
-      var v=parseInt(d.records[0].fields.Value);
-      if(v>0) WIN_SCORE=v;
-      var el=document.getElementById('adminScore');
-      if(el) el.value=WIN_SCORE;
+      d.records.forEach(function(rec){
+        var name=rec.fields.Name, val=parseInt(rec.fields.Value);
+        if(name==='WinScore'&&val>0){
+          WIN_SCORE=val;
+          var el=document.getElementById('adminScore');
+          if(el) el.value=WIN_SCORE;
+        }
+        if(name==='GtdCap'&&val>0){
+          GTD_CAP=val;
+          var el=document.getElementById('adminCap');
+          if(el) el.value=GTD_CAP;
+        }
+      });
     }
   }).catch(function(){});
 })();
