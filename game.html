@@ -2,39 +2,398 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Gobinos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --green:#2a5c2a;
-  --bright:#4ade80;
-  --mud:#060a04;
-  --slime:#6b8f3e;
-  --bone:#e8dcc8;
-  --blood:#cc2200;
-}
 *{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;color:#e8dcc8;}
+#wrap{position:relative;background:#050a03;}
+#gameCanvas{display:block;background:#050a03;}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,0.93);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.card{background:#0d0d0a;border:1px solid rgba(107,143,62,0.4);border-radius:6px;padding:32px 28px;width:100%;max-width:320px;text-align:center;position:relative;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#4ade80,transparent);}
+.o-title{font-family:'Creepster',cursive;font-size:2.2rem;color:#4ade80;letter-spacing:4px;margin-bottom:6px;}
+.o-sub{font-size:0.56rem;color:rgba(232,220,200,0.45);letter-spacing:1px;line-height:2.3;margin-bottom:20px;}
+.o-btn{width:100%;padding:14px;background:#1e4a1e;border:1px solid rgba(74,222,128,0.35);border-radius:4px;color:#e8dcc8;font-family:'Creepster',cursive;font-size:1.1rem;letter-spacing:3px;cursor:pointer;text-transform:uppercase;margin-top:8px;transition:background .2s;}
+.o-btn:hover{background:#2a5c2a;}
+.o-btn.red{background:rgba(80,0,0,.5);border-color:rgba(204,34,0,.4);font-size:.85rem;}
+.o-input{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:11px 14px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.75rem;outline:none;margin-bottom:8px;text-align:center;letter-spacing:1px;}
+.o-input:focus{border-color:rgba(74,222,128,.5);}
+.o-input.err{border-color:rgba(204,34,0,.6);}
+.o-err{font-size:.5rem;color:#cc2200;letter-spacing:1px;margin-bottom:8px;display:none;}
+.badge{display:inline-block;background:rgba(107,143,62,.1);border:1px solid rgba(107,143,62,.25);border-radius:20px;padding:4px 14px;font-size:.46rem;letter-spacing:3px;color:#6b8f3e;text-transform:uppercase;margin-bottom:16px;}
+.admin-label{font-size:.45rem;color:rgba(74,222,128,.4);letter-spacing:2px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="gameCanvas"></canvas>
 
-body{
-  background:var(--mud);
-  min-height:100vh;
-  font-family:'Space Mono',monospace;
-  color:var(--bone);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-  position:relative;
+  <!-- FIRST VISIT: form state -->
+  <div class="overlay" id="startScreen">
+    <div class="card" id="newGoblinCard">
+      <div class="o-title">GOBINOS</div>
+      <div class="o-sub" style="margin-bottom:16px;">goblins only · no rules</div>
+      <input class="o-input" id="startWallet" placeholder="0x... wallet" maxlength="42" autocomplete="off" spellcheck="false">
+      <input class="o-input" id="startTwitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
+      <div class="o-err" id="startErr"></div>
+      <button class="o-btn" onclick="validateAndStart()" style="white-space:nowrap;font-size:1.1rem;letter-spacing:4px;">im a goblin</button>
+    </div>
+
+    <!-- RETURNING: different card, hidden by default -->
+    <div class="card" id="returningCard" style="display:none;border-color:rgba(74,222,128,0.2);">
+      <div style="font-size:0.42rem;color:rgba(107,143,62,0.5);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;">welcome back</div>
+      <div id="returningHandle" style="font-family:'Creepster',cursive;font-size:2rem;color:#4ade80;letter-spacing:3px;margin-bottom:4px;"></div>
+      <div id="returningWallet" style="font-size:0.42rem;color:rgba(232,220,200,0.2);letter-spacing:2px;margin-bottom:24px;"></div>
+      <button class="o-btn" onclick="validateAndStart()" style="font-size:.85rem;letter-spacing:3px;background:rgba(20,50,20,0.8);white-space:nowrap;">back in the trenches</button>
+      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.06);border-color:rgba(74,222,128,0.2);font-size:.72rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.65);">leaderboard</button>
+      <button onclick="resetToNewGoblin()" style="background:transparent;border:none;color:rgba(204,34,0,0.5);font-size:0.48rem;letter-spacing:2px;cursor:pointer;margin-top:10px;font-family:'Space Mono',monospace;text-decoration:underline;padding:4px;display:block;width:100%;text-align:center;">not you?</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="deadScreen" style="display:none">
+    <div class="card">
+      <div class="o-title" style="color:#cc2200">ngmi</div>
+      <div class="o-sub" id="deadSub"></div>
+      <button class="o-btn" onclick="restartGame()">try again</button>
+      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">leaderboard</button>
+      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="winScreen" style="display:none">
+    <div class="card">
+      <div class="o-title">gm goblin</div>
+      <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
+      <div class="o-err" id="winErr"></div>
+      <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim GTD spot</button>
+      <button class="o-btn red" onclick="restartGame()">play again</button>
+      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="pauseScreen" style="display:none">
+    <div class="card">
+      <div class="o-title" style="font-size:1.6rem">paused</div>
+      <div class="o-sub" style="margin-bottom:12px;" id="pauseScore"></div>
+      <button class="o-btn" onclick="resumeGame()">resume</button>
+      <button class="o-btn red" onclick="restartGame()">restart</button>
+      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="checkerScreen" style="display:none">
+    <div class="card">
+      <div class="o-title" style="font-size:1.4rem">check my spot</div>
+      <div class="o-sub" style="margin-bottom:16px;">enter your wallet to see if you're on the goblist</div>
+      <input class="o-input" id="checkerWallet" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
+      <div class="o-err" id="checkerErr"></div>
+      <div id="checkerResult" style="display:none;padding:16px;border-radius:4px;margin-bottom:12px;font-size:.7rem;letter-spacing:2px;text-align:center;"></div>
+      <button class="o-btn" onclick="checkWallet()">check</button>
+      <button class="o-btn red" onclick="document.getElementById('checkerScreen').style.display='none'" style="font-size:.75rem;padding:10px;margin-top:4px;">back</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="lbScreen" style="display:none">
+    <div class="card" style="max-width:360px;max-height:85vh;overflow-y:auto;">
+      <div class="o-title" style="font-size:1.5rem;margin-bottom:4px;">leaderboard</div>
+      <div style="font-size:.45rem;color:rgba(74,222,128,.4);letter-spacing:3px;margin-bottom:18px;">TOP GOBLINS</div>
+      <div id="lbList" style="text-align:left;"></div>
+      <button class="o-btn" onclick="document.getElementById('lbScreen').style.display='none'" style="margin-top:16px;font-size:.8rem;padding:10px;">back</button>
+      <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="adminLoginScreen" style="display:none">
+    <div class="card" style="max-width:280px;">
+      <div class="o-title" style="font-size:1.2rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
+      <input class="o-input" id="adminPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')checkAdminPass()">
+      <div class="o-err" id="adminPassErr">wrong passcode</div>
+      <button class="o-btn" onclick="checkAdminPass()" style="font-size:.85rem;">unlock</button>
+      <button class="o-btn" onclick="document.getElementById('adminLoginScreen').style.display='none'" style="font-size:.7rem;padding:8px;background:transparent;margin-top:4px;">cancel</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="adminScreen" style="display:none">
+    <div class="card" style="max-height:88vh;overflow-y:auto;">
+      <div class="o-title" style="font-size:1.3rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
+
+      <div class="admin-label">WIN SCORE</div>
+      <input class="o-input" id="adminScore" value="500" style="margin-bottom:6px;">
+      <button class="o-btn" onclick="saveAdminScore()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
+
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
+        <div class="admin-label">EXPORT WALLETS</div>
+        <button class="o-btn" onclick="exportWallets('allowlist')" style="font-size:.7rem;padding:9px;margin-top:6px;">export allowlist</button>
+        <button class="o-btn" onclick="exportWallets('masterlist')" style="font-size:.7rem;padding:9px;margin-top:4px;">export masterlist</button>
+      </div>
+
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
+        <div class="admin-label">IMPORT WALLETS</div>
+        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">one wallet per line, writes to both tables</div>
+        <textarea id="importData" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:10px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.65rem;height:80px;outline:none;resize:none;" placeholder="0x...&#10;0x..."></textarea>
+        <input class="o-input" id="importHandle" placeholder="@collab handle (optional)" style="margin-top:4px;">
+        <button class="o-btn" onclick="importWallets()" style="font-size:.7rem;padding:9px;margin-top:4px;">import</button>
+        <div id="importStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
+      </div>
+
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;">
+        <div class="admin-label">DANGER</div>
+        <button class="o-btn red" onclick="clearPhase()" style="font-size:.7rem;padding:9px;margin-top:6px;">clear allowlist (keep masterlist)</button>
+      </div>
+
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
+        <div class="admin-label">LEADERBOARD</div>
+        <button class="o-btn red" onclick="clearLeaderboard()" style="font-size:.7rem;padding:9px;margin-top:6px;">wipe leaderboard</button>
+      </div>
+      <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'" style="font-size:.75rem;padding:10px;margin-top:12px;background:transparent;">close</button>
+    </div>
+  </div>
+
+  <!-- Pause button -->
+  <button id="pauseBtn" style="display:none;position:absolute;top:10px;right:10px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;">II</button>
+
+  <!-- Mute button -->
+  <button id="muteBtn" style="display:none;position:absolute;top:10px;right:58px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;" onclick="toggleMute()">♩♩</button>
+
+  <!-- Admin trigger -->
+  <div id="adminTrigger" onclick="adminTap()" style="position:fixed;bottom:0;right:0;width:48px;height:48px;z-index:200;cursor:default;-webkit-tap-highlight-color:transparent;"></div>
+</div>
+
+<script>
+// ---- CONSTANTS ----
+var AIRTABLE_KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
+var BASE='appRp0o1yWMEMrhbO';
+var TABLE='tblJTJZVtJS57rkGt';
+var MASTERLIST='tblP9izXvEOZj29Gz';
+var LEADERBOARD='tblOP5T8DCMDeV3Re';
+var CONFIG_TABLE='tblAMYHI1S6OTihNO';
+var WIN_SCORE=500;
+var playerWallet='', playerHandle='';
+var SESSION_TOKEN=null;
+var WORKER_URL='https://gobinos-api.vercel.app';
+
+// ---- SOUND SYSTEM ----
+var _audioCtx=null;
+var soundOn=true;
+
+function getACtx(){
+  if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(_audioCtx.state==='suspended') _audioCtx.resume();
+  return _audioCtx;
 }
 
-/* ---- cave bg ---- */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(42,92,42,0.18) 0%, transparent 70%),
+function toggleMute(){
+  soundOn=!soundOn;
+  document.getElementById('muteBtn').textContent=soundOn?'♩♩':'ø♩';
+}
+
+// Gun / shoot: short sharp "pew"
+function sndShoot(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var o=c.createOscillator();
+    var g=c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type='square';
+    o.frequency.setValueAtTime(1200,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(400,c.currentTime+0.06);
+    g.gain.setValueAtTime(0.18,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.07);
+    o.start(c.currentTime); o.stop(c.currentTime+0.07);
+  }catch(e){}
+}
+
+// Explosion: noise burst when enemy dies
+function sndExplode(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var sr=c.sampleRate;
+    var len=Math.floor(sr*0.18);
+    var buf=c.createBuffer(1,len,sr);
+    var d=buf.getChannelData(0);
+    for(var i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-(i/len),1.5);
+    var src=c.createBufferSource();
+    src.buffer=buf;
+    var filt=c.createBiquadFilter();
+    filt.type='bandpass';
+    filt.frequency.value=280;
+    filt.Q.value=0.8;
+    var g=c.createGain();
+    g.gain.setValueAtTime(0.55,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.18);
+    src.connect(filt); filt.connect(g); g.connect(c.destination);
+    src.start(); src.stop(c.currentTime+0.18);
+  }catch(e){}
+}
+
+// Hit: low thud when goblin takes damage
+function sndHit(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var o=c.createOscillator();
+    var g=c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(220,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60,c.currentTime+0.22);
+    g.gain.setValueAtTime(0.35,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.22);
+    o.start(c.currentTime); o.stop(c.currentTime+0.22);
+    // extra noise layer
+    var sr=c.sampleRate;
+    var len=Math.floor(sr*0.1);
+    var buf=c.createBuffer(1,len,sr);
+    var dd=buf.getChannelData(0);
+    for(var i=0;i<len;i++) dd[i]=(Math.random()*2-1)*0.4;
+    var src=c.createBufferSource(); src.buffer=buf;
+    var g2=c.createGain();
+    g2.gain.setValueAtTime(0.2,c.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.1);
+    src.connect(g2); g2.connect(c.destination);
+    src.start(); src.stop(c.currentTime+0.1);
+  }catch(e){}
+}
+
+// Game over: descending doom tones
+function sndGameOver(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var freqs=[440,330,247,185];
+    freqs.forEach(function(f,i){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='sawtooth';
+      o.frequency.value=f;
+      var t=c.currentTime+i*0.2;
+      g.gain.setValueAtTime(0.22,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+      o.start(t); o.stop(t+0.28);
+    });
+  }catch(e){}
+}
+
+// Win: ascending goblin fanfare
+function sndWin(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var notes=[523,659,784,1047,1319];
+    notes.forEach(function(f,i){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='triangle';
+      o.frequency.value=f;
+      var t=c.currentTime+i*0.1;
+      g.gain.setValueAtTime(0.22,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+      o.start(t); o.stop(t+0.35);
+    });
+    // chord bloom at the end
+    var chord=[523,659,784];
+    chord.forEach(function(f){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='sine';
+      o.frequency.value=f;
+      var t=c.currentTime+0.55;
+      g.gain.setValueAtTime(0.12,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.8);
+      o.start(t); o.stop(t+0.8);
+    });
+  }catch(e){}
+}
+
+// ---- CANVAS SETUP ----
+var canvas=document.getElementById('gameCanvas');
+var ctx=canvas.getContext('2d');
+var wrap=document.getElementById('wrap');
+var GW,GH,LANE_W,LANE_X,GOBLIN_Y;
+
+function resize(){
+  GH=window.innerHeight;
+  GW=Math.min(window.innerWidth,Math.round(GH*(9/16)));
+  canvas.width=GW; canvas.height=GH;
+  wrap.style.width=GW+'px'; wrap.style.height=GH+'px';
+  LANE_W=Math.round(GW*0.54);
+  LANE_X=(GW-LANE_W)/2;
+  GOBLIN_Y=GH-Math.round(GH*0.12);
+}
+resize();
+window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
+
+// ---- GAME STATE ----
+var score=0,wave=1,lives=3,gameRunning=false;
+var GOBLIN_X=GW/2;
+var enemies=[],projectiles=[],particles=[],missTexts=[];
+var spawnTimer=0,waveTimer=0,lastTime=0;
+var goblinAnim=0,hitFlash=0;
+var keys={};
+var hasPlayed=false;
+var touchHeld=false,touchStartX=0,touchStartTime=0;
+var autoShootTimer=0;
+var gamePaused=false;
+
+function startAutoShoot(){ touchHeld=true; }
+function stopAutoShoot(){ touchHeld=false; }
+
+function scaleX(cx){
+  var r=canvas.getBoundingClientRect();
+  return (cx-r.left)*(canvas.width/r.width);
+}
+function clampGoblin(x){
+  return Math.max(LANE_X+22,Math.min(LANE_X+LANE_W-22,x));
+}
+
+document.getElementById('pauseBtn').addEventListener('touchend',function(e){
+  e.preventDefault(); e.stopPropagation(); togglePause();
+},{passive:false});
+document.getElementById('pauseBtn').addEventListener('click',function(e){
+  if(e._fromTouch) return; togglePause();
+});
+
+// ---- INPUT ----
+document.addEventListener('keydown',function(e){ keys[e.key]=true; });
+document.addEventListener('keyup',function(e){ keys[e.key]=false; });
+
+canvas.addEventListener('touchstart',function(e){
+  e.preventDefault();
+  var tx=scaleX(e.touches[0].clientX);
+  touchStartX=tx; touchStartTime=Date.now(); touchHeld=true;
+  if(gameRunning){ GOBLIN_X=clampGoblin(tx); startAutoShoot(); }
+},{passive:false});
+
+canvas.addEventListener('touchmove',function(e){
+  e.preventDefault();
+  if(!gameRunning) return;
+  GOBLIN_X=clampGoblin(scaleX(e.touches[0].clientX));
+},{passive:false});
+
+canvas.addEventListener('touchend',function(e){
+  e.preventDefault(); touchHeld=false; stopAutoShoot();
+  if(!gameRunning) return;
+  var tx=scaleX(e.changedTouches[0].clientX);
+  var moved=Math.abs(tx-touchStartX);
+  if(Date.now()-touchStartTime<300 && moved<25) shoot();
+},{passive:false});
+
+canvas.addEventListener('click',function(e){
+  if(!gameRunning) return; shoot();
+});
+canvas.addEventListener('mousedown',function(e){
+  if(!gameRunning) return; startAutoShoot();
+});
+document.addEventListener('mouseup',function(){    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(42,92,42,0.18) 0%, transparent 70%),
     radial-gradient(ellipse 80% 60% at 20% 50%, rgba(20,40,10,0.4) 0%, transparent 60%),
     radial-gradient(ellipse 80% 60% at 80% 50%, rgba(20,40,10,0.4) 0%, transparent 60%);
   pointer-events:none;
