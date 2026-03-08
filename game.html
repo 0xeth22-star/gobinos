@@ -727,8 +727,9 @@ async function claimSpot(){
   };
   try{
     await post(TABLE); await post(MASTERLIST); await post(LEADERBOARD);
-    btn.textContent='ur in goblin ⚔';
+    btn.textContent='ur in goblin';
     btn.style.background='rgba(42,92,42,0.8)';
+    var pa=document.querySelector('#winScreen .o-btn.red'); if(pa) pa.style.display='none';
   } catch(e){
     btn.disabled=false;
     btn.textContent='broke — try again';
