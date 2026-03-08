@@ -32,15 +32,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 <div id="wrap">
   <canvas id="gameCanvas"></canvas>
 
+  <!-- FIRST VISIT: form state -->
   <div class="overlay" id="startScreen">
-    <div class="card">
+    <div class="card" id="newGoblinCard">
       <div class="o-title">GOBINOS</div>
-      <div class="o-sub" style="margin-bottom:16px;">goblins only no rules</div>
+      <div class="o-sub" style="margin-bottom:16px;">goblins only · no rules</div>
       <input class="o-input" id="startWallet" placeholder="0x... wallet" maxlength="42" autocomplete="off" spellcheck="false">
       <input class="o-input" id="startTwitter" placeholder="@handle" maxlength="50" autocomplete="off" spellcheck="false">
       <div class="o-err" id="startErr"></div>
-      <button class="o-btn" onclick="validateAndStart()" style="white-space:nowrap;font-size:1rem;">enter the trenches</button>
-      <button id="lbStartBtn" class="o-btn" onclick="showLeaderboard()" style="display:none;background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.3);font-size:.75rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.8);">leaderboard</button>
+      <button class="o-btn" onclick="validateAndStart()" style="white-space:nowrap;font-size:1.1rem;letter-spacing:4px;">im a goblin</button>
+    </div>
+
+    <!-- RETURNING: different card, hidden by default -->
+    <div class="card" id="returningCard" style="display:none;border-color:rgba(74,222,128,0.2);">
+      <div style="font-size:0.42rem;color:rgba(107,143,62,0.5);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;">welcome back</div>
+      <div id="returningHandle" style="font-family:'Creepster',cursive;font-size:2rem;color:#4ade80;letter-spacing:3px;margin-bottom:4px;"></div>
+      <div id="returningWallet" style="font-size:0.42rem;color:rgba(232,220,200,0.2);letter-spacing:2px;margin-bottom:24px;"></div>
+      <button class="o-btn" onclick="validateAndStart()" style="font-size:1rem;letter-spacing:4px;background:rgba(20,50,20,0.8);">back in the trenches</button>
+      <button class="o-btn" onclick="showLeaderboard()" style="background:rgba(74,222,128,0.06);border-color:rgba(74,222,128,0.2);font-size:.72rem;padding:10px;margin-top:4px;letter-spacing:2px;color:rgba(74,222,128,0.65);">leaderboard</button>
+      <button onclick="resetToNewGoblin()" style="background:transparent;border:none;color:rgba(204,34,0,0.5);font-size:0.48rem;letter-spacing:2px;cursor:pointer;margin-top:10px;font-family:'Space Mono',monospace;text-decoration:underline;padding:4px;">not you? switch goblin</button>
     </div>
   </div>
 
@@ -711,33 +721,29 @@ function validateAndStart(){
     if(w && t && /^0x[a-fA-F0-9]{40}$/.test(w)){
       playerWallet=w; playerHandle=t;
       hasPlayed=true;
-      var _lb=document.getElementById('lbStartBtn'); if(_lb) _lb.style.display='block';
+      // pre-fill hidden inputs
       document.getElementById('startWallet').value=w;
       document.getElementById('startTwitter').value=t;
-      var card=document.querySelector('#startScreen .card');
-      var info=document.createElement('div');
-      info.id='returningInfo';
-      info.style='font-size:.44rem;color:rgba(74,222,128,.35);letter-spacing:1px;margin-bottom:10px;margin-top:-8px;';
-      info.innerHTML='playing as <span style="color:rgba(74,222,128,.8);">'+escHtml(t)+'</span> <a onclick="clearPlayer()" style="color:rgba(204,34,0,.6);cursor:pointer;text-decoration:underline;">not you?</a>';
-      document.getElementById('startWallet').style.display='none';
-      document.getElementById('startTwitter').style.display='none';
-      document.getElementById('startErr').style.display='none';
-      var sub=card.querySelector('.o-sub');
-      sub.parentNode.insertBefore(info,sub.nextSibling);
+      // show returning card, hide new goblin card
+      document.getElementById('newGoblinCard').style.display='none';
+      document.getElementById('returningCard').style.display='block';
+      document.getElementById('returningHandle').textContent=t;
+      document.getElementById('returningWallet').textContent=w.slice(0,6)+'...'+w.slice(-4);
     }
   }catch(e){}
 })();
 
-function clearPlayer(){
+function resetToNewGoblin(){
   try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); }catch(e){}
   playerWallet=''; playerHandle='';
   hasPlayed=false;
-  var lb=document.getElementById('lbStartBtn'); if(lb) lb.style.display='none';
-  document.getElementById('startWallet').style.display='block';
-  document.getElementById('startTwitter').style.display='block';
-  var ri=document.getElementById('returningInfo');
-  if(ri) ri.remove();
+  document.getElementById('startWallet').value='';
+  document.getElementById('startTwitter').value='';
+  document.getElementById('returningCard').style.display='none';
+  document.getElementById('newGoblinCard').style.display='block';
 }
+
+function clearPlayer(){ resetToNewGoblin(); }
 
 function startGame(){
   document.getElementById('startScreen').style.display='none';
@@ -768,7 +774,12 @@ function goMenu(){
   document.getElementById('muteBtn').style.display='none';
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
-  if(hasPlayed){ var lb=document.getElementById('lbStartBtn'); if(lb) lb.style.display='block'; }
+  if(hasPlayed){
+    document.getElementById('newGoblinCard').style.display='none';
+    document.getElementById('returningCard').style.display='block';
+    document.getElementById('returningHandle').textContent=playerHandle;
+    document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4);
+  }
 }
 
 function restartGame(){
@@ -780,8 +791,10 @@ function restartGame(){
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
   if(hasPlayed){
-    var lb=document.getElementById('lbStartBtn');
-    if(lb) lb.style.display='block';
+    document.getElementById('newGoblinCard').style.display='none';
+    document.getElementById('returningCard').style.display='block';
+    document.getElementById('returningHandle').textContent=playerHandle;
+    document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4);
   }
 }
 
