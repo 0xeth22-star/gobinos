@@ -191,7 +191,7 @@ function toggleMute(){
   document.getElementById('muteBtn').textContent=soundOn?'♩♩':'ø♩';
 }
 
-// Gun / shoot — short sharp "pew"
+// Gun / shoot: short sharp "pew"
 function sndShoot(){
   if(!soundOn) return;
   try{
@@ -208,7 +208,7 @@ function sndShoot(){
   }catch(e){}
 }
 
-// Explosion — noise burst when enemy dies
+// Explosion: noise burst when enemy dies
 function sndExplode(){
   if(!soundOn) return;
   try{
@@ -232,7 +232,7 @@ function sndExplode(){
   }catch(e){}
 }
 
-// Hit — low thud when goblin takes damage
+// Hit: low thud when goblin takes damage
 function sndHit(){
   if(!soundOn) return;
   try{
@@ -261,7 +261,7 @@ function sndHit(){
   }catch(e){}
 }
 
-// Game over — descending doom tones
+// Game over: descending doom tones
 function sndGameOver(){
   if(!soundOn) return;
   try{
@@ -281,7 +281,7 @@ function sndGameOver(){
   }catch(e){}
 }
 
-// Win — ascending goblin fanfare
+// Win: ascending goblin fanfare
 function sndWin(){
   if(!soundOn) return;
   try{
@@ -802,7 +802,7 @@ function gameOver(){
   hasPlayed=true;
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('deadSub').textContent=score+' kills — mosquitos won';
+  document.getElementById('deadSub').textContent=score+' kills. mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver();
   fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
@@ -842,7 +842,7 @@ async function claimSpot(){
     var pa=document.querySelector('#winScreen .o-btn.red'); if(pa) pa.style.display='none';
   }catch(e){
     btn.disabled=false;
-    btn.textContent='broke — try again';
+    btn.textContent='broke. try again';
   }
 }
 
@@ -1041,7 +1041,7 @@ function checkWallet(){
       res.style.background='rgba(80,0,0,0.3)';
       res.style.border='1px solid rgba(204,34,0,0.4)';
       res.style.color='#cc2200';
-      res.textContent='ngmi — not on the list';
+      res.textContent='ngmi. not on the list';
     }
   }).catch(function(){
     btn.textContent='check'; btn.disabled=false;
@@ -1049,7 +1049,7 @@ function checkWallet(){
   });
 }
 
-// init — load WIN_SCORE from config
+// init: load WIN_SCORE from config
 (function(){
   fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{
     headers:{'Authorization':'Bearer '+AIRTABLE_KEY}
