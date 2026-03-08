@@ -249,6 +249,588 @@ canvas#bgCanvas{
 /* ---- admin ---- */
 .admin-trigger{
   position:fixed;bottom:0;right:0;
+  width:80px;height:80px;
+  z-index:200;
+  cursor:default;
+  -webkit-tap-highlight-color:transparent;
+}
+.admin-overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.88);
+  z-index:100;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.admin-overlay.show{display:flex;}
+.admin-card{
+  background:#0a0d08;
+  border:1px solid rgba(107,143,62,0.3);
+  border-radius:6px;
+  padding:32px;
+  width:100%;max-width:400px;
+  position:relative;
+  max-height:88vh;
+  overflow-y:auto;
+}
+.admin-title{
+  font-family:'Creepster',cursive;
+  font-size:1.4rem;
+  color:var(--slime);
+  letter-spacing:3px;
+  margin-bottom:24px;
+}
+.admin-field{margin-bottom:14px;}
+.admin-field label{
+  display:block;
+  font-size:.45rem;
+  letter-spacing:3px;
+  color:var(--slime);
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.admin-field input,.admin-field textarea{
+  width:100%;
+  background:rgba(0,0,0,.5);
+  border:1px solid rgba(107,143,62,.2);
+  border-radius:4px;
+  padding:10px 12px;
+  color:var(--bone);
+  font-family:'Space Mono',monospace;
+  font-size:.72rem;
+  outline:none;
+  resize:none;
+}
+.admin-field input:focus,.admin-field textarea:focus{border-color:rgba(74,222,128,.4);}
+.a-btn{
+  width:100%;padding:12px;
+  background:var(--green);
+  border:1px solid rgba(74,222,128,.3);
+  border-radius:4px;
+  color:var(--bone);
+  font-family:'Creepster',cursive;
+  font-size:1rem;letter-spacing:3px;
+  cursor:pointer;margin-top:6px;
+  text-transform:uppercase;
+}
+.a-btn.sm{font-size:.8rem;padding:10px;}
+.a-btn.ghost{background:rgba(0,0,0,.4);}
+.a-btn.danger{background:rgba(100,0,0,.4);border-color:rgba(204,34,0,.4);}
+.a-close{
+  position:absolute;top:16px;right:16px;
+  background:none;border:none;
+  color:rgba(232,220,200,.3);
+  cursor:pointer;font-size:1rem;
+  font-family:'Space Mono',monospace;
+}
+.s-div{border-top:1px solid rgba(107,143,62,.1);margin:14px 0;padding-top:12px;}
+.s-lbl{font-size:.44rem;letter-spacing:3px;color:rgba(107,143,62,.45);text-transform:uppercase;margin-bottom:8px;}
+.a-status{font-size:.52rem;margin-top:10px;letter-spacing:1px;color:var(--bright);display:none;}
+.a-status.show{display:block;}
+.a-status.err{color:var(--blood);}
+.a-err{font-size:.5rem;color:var(--blood);letter-spacing:1px;margin-top:4px;display:none;}
+</style>
+</head>
+<body>
+
+<!-- ambient bg canvas -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- drip lines -->
+<div class="drip" style="left:15%;height:40%;top:0;opacity:0.6;"></div>
+<div class="drip" style="left:38%;height:25%;top:0;opacity:0.4;"></div>
+<div class="drip" style="left:62%;height:35%;top:0;opacity:0.5;"></div>
+<div class="drip" style="left:85%;height:20%;top:0;opacity:0.3;"></div>
+
+<!-- main -->
+<div class="site">
+  <span class="goblin-icon">🧌</span>
+  <div class="title" id="gobTitle">GOBINOS</div>
+  <div class="tagline">goblins only · no rules</div>
+
+  <a href="/game" class="enter-btn" id="enterBtn" style="display:none">enter the trenches</a>
+
+  <!-- teaser state — shown when game not live -->
+  <div id="teaserBlock" style="display:flex;flex-direction:column;align-items:center;gap:0;">
+    <div style="font-size:0.42rem;color:rgba(107,143,62,0.45);letter-spacing:5px;text-transform:uppercase;margin-bottom:28px;">something is coming</div>
+    <div style="font-size:0.52rem;color:rgba(74,222,128,0.3);letter-spacing:3px;text-transform:uppercase;margin-top:0;" id="teaserSub">trenches open tomorrow</div>
+  </div>
+
+  <!-- checker (admin-toggled) -->
+  <div class="checker-wrap" id="checkerWrap">
+    <div class="checker-label">check your spot</div>
+    <div class="checker-row">
+      <input class="checker-input" id="checkInput" placeholder="0x..." maxlength="42" autocomplete="off" spellcheck="false">
+      <button class="checker-btn" id="checkBtn" onclick="doCheck()">check</button>
+    </div>
+    <div class="checker-result" id="checkResult"></div>
+  </div>
+</div>
+
+<!-- X link bottom -->
+<a href="https://x.com/gobinosoneth" target="_blank" class="x-link">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.738l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+  </svg>
+  @gobinosoneth
+</a>
+
+<!-- admin trigger bottom right corner -->
+<div class="admin-trigger" id="adminTriggerEl" onclick="adminTap()"></div>
+
+<!-- admin overlay -->
+<div class="admin-overlay" id="adminOverlay">
+  <div class="admin-card">
+    <button class="a-close" onclick="closeAdmin()">×</button>
+    <div class="admin-title">ADMIN</div>
+
+    <div id="adminLogin">
+      <div class="admin-field">
+        <label>password</label>
+        <input type="password" id="adminPass" placeholder="password" onkeydown="if(event.key==='Enter')checkPass()">
+      </div>
+      <div class="a-err" id="passErr">wrong password</div>
+      <button class="a-btn" onclick="checkPass()">unlock</button>
+    </div>
+
+    <div id="adminControls" style="display:none">
+
+      <div class="s-lbl">toggles</div>
+      <button class="a-btn sm" id="checkerToggleBtn" onclick="toggleChecker()">checker: off</button>
+      <button class="a-btn sm" id="gameToggleBtn" onclick="toggleGame()" style="margin-top:4px;">game: hidden</button>
+
+      <div class="s-div">
+        <div class="s-lbl">export</div>
+        <button class="a-btn sm ghost" onclick="exportWallets('allowlist')">export allowlist</button>
+        <button class="a-btn sm ghost" onclick="exportWallets('masterlist')" style="margin-top:4px;">export masterlist</button>
+      </div>
+
+      <div class="s-div">
+        <div class="s-lbl">import wallets</div>
+        <div class="admin-field">
+          <textarea id="importData" rows="4" placeholder="0x...&#10;0x..."></textarea>
+        </div>
+        <div class="admin-field">
+          <input id="importHandle" placeholder="@collab handle (optional)">
+        </div>
+        <button class="a-btn sm" onclick="importWallets()">import</button>
+      </div>
+
+      <div class="s-div">
+        <div class="s-lbl">danger</div>
+        <button class="a-btn sm danger" onclick="clearPhase()">clear allowlist (keep masterlist)</button>
+      </div>
+
+      <div class="a-status" id="adminStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- CONFIG ----
+var KEY='patLbPPbk4EctcB5l.94cf5b72ac496a6db920973e16b6d96500a99c6beb240f988fda855e6d14a960';
+var BASE='appRp0o1yWMEMrhbO';
+var TABLE='tblJTJZVtJS57rkGt';
+var MASTERLIST='tblP9izXvEOZj29Gz';
+var CONFIG='tblAMYHI1S6OTihNO';
+var PASS='gobinos2024';
+var checkerOn=false, gameOn=false, configId=null;
+
+// ---- INIT ----
+async function init(){
+  try{
+    var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG,{headers:{'Authorization':'Bearer '+KEY}});
+    var d=await r.json();
+    if(d.records&&d.records.length){
+      configId=d.records[0].id;
+      checkerOn=d.records[0].fields.Checker==='1';
+      gameOn=d.records[0].fields.GameOn==='1';
+    }
+    applyChecker();
+    applyGame();
+  }catch(e){}
+}
+
+function applyGame(){
+  document.getElementById('enterBtn').style.display=gameOn?'inline-block':'none';
+  document.getElementById('teaserBlock').style.display=gameOn?'none':'flex';
+  var b=document.getElementById('gameToggleBtn');
+  if(b) b.textContent='game: '+(gameOn?'live':'hidden');
+}
+
+function applyChecker(){
+  document.getElementById('checkerWrap').style.display=checkerOn?'flex':'none';
+  var b=document.getElementById('checkerToggleBtn');
+  if(b) b.textContent='checker: '+(checkerOn?'on':'off');
+}
+
+// ---- CHECKER ----
+async function doCheck(){
+  var w=document.getElementById('checkInput').value.trim();
+  var res=document.getElementById('checkResult');
+  var btn=document.getElementById('checkBtn');
+  document.getElementById('checkInput').classList.remove('err');
+  if(!/^0x[a-fA-F0-9]{40}$/.test(w)){
+    document.getElementById('checkInput').classList.add('err'); return;
+  }
+  btn.disabled=true; btn.textContent='...';
+  try{
+    var resp=await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST+'?filterByFormula=LOWER({Wallet})="'+w.toLowerCase()+'"',{headers:{'Authorization':'Bearer '+KEY}});
+    var data=await resp.json();
+    res.style.display='block';
+    if(data.records&&data.records.length){
+      res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+      res.textContent='ur GTD goblin 🧌';
+    }else{
+      res.style.cssText='display:block;background:rgba(80,0,0,.3);border:1px solid rgba(204,34,0,.3);color:#cc2200;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+      res.textContent='ngmi ser';
+    }
+  }catch(e){ res.style.display='block'; res.style.color='#cc2200'; res.textContent='try again'; }
+  btn.disabled=false; btn.textContent='check';
+}
+
+// ---- ADMIN ----
+var tapC=0,tapT;
+document.getElementById('adminTriggerEl').addEventListener('touchend',function(e){
+  e.preventDefault(); adminTap();
+},{passive:false});
+function adminTap(){
+  tapC++;
+  clearTimeout(tapT);
+  tapT=setTimeout(function(){tapC=0;},700);
+  if(tapC>=3){tapC=0;openAdmin();}
+}
+var gC=0,gT;
+document.addEventListener('keydown',function(e){
+  if(e.key==='G'&&e.shiftKey){
+    gC++;clearTimeout(gT);
+    gT=setTimeout(function(){gC=0;},800);
+    if(gC>=2){gC=0;openAdmin();}
+  }
+});
+// triple-tap title too
+document.getElementById('gobTitle').addEventListener('click',function(){
+  tapC++;clearTimeout(tapT);
+  tapT=setTimeout(function(){tapC=0;},600);
+  if(tapC>=3){tapC=0;openAdmin();}
+});
+
+function openAdmin(){document.getElementById('adminOverlay').classList.add('show');}
+function closeAdmin(){
+  document.getElementById('adminOverlay').classList.remove('show');
+  document.getElementById('adminLogin').style.display='block';
+  document.getElementById('adminControls').style.display='none';
+  document.getElementById('adminPass').value='';
+  document.getElementById('passErr').style.display='none';
+}
+function checkPass(){
+  if(document.getElementById('adminPass').value===PASS){
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminControls').style.display='block';
+    applyChecker();
+  }else{
+    document.getElementById('passErr').style.display='block';
+  }
+}
+
+function toggleGame(){
+  gameOn=!gameOn; applyGame();
+  var body={fields:{GameOn:gameOn?'1':'0'}};
+  var url=configId?'https://api.airtable.com/v0/'+BASE+'/'+CONFIG+'/'+configId:'https://api.airtable.com/v0/'+BASE+'/'+CONFIG;
+  fetch(url,{method:configId?'PATCH':'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  showStatus('game '+(gameOn?'live':'hidden'),false);
+}
+
+function toggleChecker(){
+  checkerOn=!checkerOn; applyChecker();
+  var body={fields:{Checker:checkerOn?'1':'0'}};
+  var url=configId?'https://api.airtable.com/v0/'+BASE+'/'+CONFIG+'/'+configId:'https://api.airtable.com/v0/'+BASE+'/'+CONFIG;
+  fetch(url,{method:configId?'PATCH':'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  showStatus('checker '+(checkerOn?'on':'off'),false);
+}
+
+async function exportWallets(type){
+  var tbl=type==='masterlist'?MASTERLIST:TABLE;
+  showStatus('fetching...',false);
+  try{
+    var all=[],offset='';
+    do{
+      var u='https://api.airtable.com/v0/'+BASE+'/'+tbl+'?pageSize=100'+(offset?'&offset='+offset:'');
+      var r=await fetch(u,{headers:{'Authorization':'Bearer '+KEY}});
+      var d=await r.json();
+      all=all.concat(d.records||[]); offset=d.offset||'';
+    }while(offset);
+    var lines=all.filter(function(r){return r.fields.Wallet;}).map(function(r){return r.fields.Wallet;});
+    var blob=new Blob([lines.join('\n')],{type:'text/plain'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='gobinos-'+type+'.txt'; a.click();
+    showStatus('exported '+lines.length,false);
+  }catch(e){showStatus('failed',true);}
+}
+
+async function importWallets(){
+  var raw=document.getElementById('importData').value.trim();
+  var handle=document.getElementById('importHandle').value.trim()||'collab';
+  if(!raw){showStatus('paste wallets first',true);return;}
+  var wallets=raw.split(/[\n,]+/).map(function(w){return w.trim();}).filter(function(w){return /^0x[a-fA-F0-9]{40}$/.test(w);});
+  if(!wallets.length){showStatus('no valid wallets',true);return;}
+  showStatus('importing '+wallets.length+'...',false);
+  var ok=0;
+  for(var i=0;i<wallets.length;i++){
+    var f={Twitter:handle,Wallet:wallets[i]};
+    try{
+      await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{method:'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:f})});
+      await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST,{method:'POST',headers:{'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:f})});
+      ok++;
+    }catch(e){}
+    if(i%10===0) showStatus('importing... '+ok+'/'+wallets.length,false);
+  }
+  showStatus('done. '+ok+' imported',false);
+  document.getElementById('importData').value='';
+}
+
+async function clearPhase(){
+  if(!confirm('delete all allowlist records? masterlist stays safe.')) return;
+  showStatus('clearing...',false);
+  try{
+    var ids=[],offset='';
+    do{
+      var u='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100'+(offset?'&offset='+offset:'');
+      var r=await fetch(u,{headers:{'Authorization':'Bearer '+KEY}});
+      var d=await r.json();
+      ids=ids.concat((d.records||[]).map(function(r){return r.id;}));
+      offset=d.offset||'';
+    }while(offset);
+    for(var i=0;i<ids.length;i+=10){
+      var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');
+      await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+KEY}});
+    }
+    showStatus('cleared '+ids.length,false);
+  }catch(e){showStatus('failed',true);}
+}
+
+function showStatus(msg,isErr){
+  var el=document.getElementById('adminStatus');
+  el.textContent=msg;
+  el.className='a-status show'+(isErr?' err':'');
+}
+
+// ---- AMBIENT BG PARTICLES ----    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(42,92,42,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 60% at 20% 50%, rgba(20,40,10,0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 80% 50%, rgba(20,40,10,0.4) 0%, transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* cave walls on sides */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    linear-gradient(90deg, rgba(4,7,2,0.92) 0%, transparent 18%),
+    linear-gradient(270deg, rgba(4,7,2,0.92) 0%, transparent 18%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* dripping slime lines */
+.drip{
+  position:fixed;
+  top:0;
+  width:2px;
+  background:linear-gradient(180deg, transparent, rgba(74,222,128,0.15), transparent);
+  pointer-events:none;
+  z-index:0;
+}
+
+canvas#bgCanvas{
+  position:fixed;inset:0;
+  width:100%;height:100%;
+  pointer-events:none;
+  z-index:0;
+  opacity:0.35;
+}
+
+/* ---- main content ---- */
+.site{
+  position:relative;
+  z-index:10;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  text-align:center;
+  padding:0 24px;
+}
+
+/* goblin icon */
+.goblin-icon{
+  font-size:clamp(3rem,10vw,5rem);
+  line-height:1;
+  margin-bottom:20px;
+  display:block;
+  filter:drop-shadow(0 0 18px rgba(74,222,128,0.25));
+  animation:gobBob 3s ease-in-out infinite;
+}
+@keyframes gobBob{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-8px);}
+}
+
+/* title */
+.title{
+  font-family:'Creepster',cursive;
+  font-size:clamp(3.5rem,14vw,7rem);
+  color:var(--bright);
+  letter-spacing:6px;
+  line-height:1;
+  text-shadow:
+    0 0 40px rgba(74,222,128,0.35),
+    0 0 80px rgba(74,222,128,0.15);
+  margin-bottom:12px;
+  animation:flicker 6s infinite;
+}
+@keyframes flicker{
+  0%,95%,100%{opacity:1;}
+  96%{opacity:0.85;}
+  97%{opacity:1;}
+  98%{opacity:0.9;}
+  99%{opacity:1;}
+}
+
+/* tagline */
+.tagline{
+  font-size:clamp(0.5rem,2vw,0.65rem);
+  color:rgba(232,220,200,0.35);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  margin-bottom:48px;
+}
+
+/* enter button */
+.enter-btn{
+  display:inline-block;
+  padding:18px 32px;
+  background:rgba(30,74,30,0.6);
+  border:1px solid rgba(74,222,128,0.45);
+  border-radius:4px;
+  color:var(--bone);
+  font-family:'Creepster',cursive;
+  white-space:nowrap;
+  font-size:clamp(0.9rem,3.5vw,1.5rem);
+  letter-spacing:5px;
+  text-decoration:none;
+  text-transform:uppercase;
+  cursor:pointer;
+  position:relative;
+  transition:all 0.2s;
+  box-shadow:0 0 30px rgba(74,222,128,0.08), inset 0 0 20px rgba(74,222,128,0.04);
+}
+.enter-btn::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(74,222,128,0.6),transparent);
+}
+.enter-btn::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(74,222,128,0.3),transparent);
+}
+.enter-btn:hover{
+  background:rgba(42,92,42,0.75);
+  box-shadow:0 0 50px rgba(74,222,128,0.18), inset 0 0 30px rgba(74,222,128,0.08);
+  transform:translateY(-2px);
+  letter-spacing:7px;
+}
+.enter-btn:active{transform:translateY(0);}
+
+/* checker section */
+.checker-wrap{
+  margin-top:32px;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  max-width:320px;
+}
+.checker-label{
+  font-size:0.42rem;
+  letter-spacing:4px;
+  color:rgba(107,143,62,0.5);
+  text-transform:uppercase;
+}
+.checker-row{display:flex;gap:8px;width:100%;}
+.checker-input{
+  flex:1;
+  background:rgba(0,0,0,0.45);
+  border:1px solid rgba(107,143,62,0.2);
+  border-radius:4px;
+  padding:10px 12px;
+  color:var(--bone);
+  font-family:'Space Mono',monospace;
+  font-size:0.68rem;
+  outline:none;
+  transition:border-color .2s;
+}
+.checker-input::placeholder{color:rgba(232,220,200,0.12);}
+.checker-input:focus{border-color:rgba(74,222,128,0.4);}
+.checker-input.err{border-color:rgba(204,34,0,0.5);}
+.checker-btn{
+  padding:10px 14px;
+  background:rgba(30,74,30,0.5);
+  border:1px solid rgba(74,222,128,0.3);
+  border-radius:4px;
+  color:var(--bone);
+  font-family:'Creepster',cursive;
+  font-size:0.9rem;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:background .2s;
+  white-space:nowrap;
+}
+.checker-btn:hover{background:rgba(42,92,42,0.7);}
+.checker-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.checker-result{
+  display:none;
+  width:100%;
+  padding:10px;
+  border-radius:4px;
+  font-size:0.6rem;
+  letter-spacing:2px;
+  text-align:center;
+}
+
+/* X link bottom */
+.x-link{
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:20;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:rgba(232,220,200,0.3);
+  text-decoration:none;
+  font-size:0.5rem;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  transition:color .2s;
+  padding:8px 16px;
+}
+.x-link:hover{color:rgba(232,220,200,0.7);}
+.x-link svg{
+  width:14px;height:14px;
+  fill:currentColor;
+  flex-shrink:0;
+}
+
+/* ---- admin ---- */
+.admin-trigger{
+  position:fixed;bottom:0;right:0;
   width:48px;height:48px;
   z-index:200;
   cursor:default;
