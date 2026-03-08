@@ -59,12 +59,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-title">gm goblin</div>
       <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
-      <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim my spot</button>
+      <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim GTD spot</button>
       <button class="o-btn red" onclick="restartGame()">play again</button>
       <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
     </div>
   </div>
-  <!-- Pause -->
+
   <div class="overlay" id="pauseScreen" style="display:none">
     <div class="card">
       <div class="o-title" style="font-size:1.6rem">paused</div>
@@ -75,7 +75,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
-  <!-- Checker -->
   <div class="overlay" id="checkerScreen" style="display:none">
     <div class="card">
       <div class="o-title" style="font-size:1.4rem">check my spot</div>
@@ -88,7 +87,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
-  <!-- Leaderboard -->
   <div class="overlay" id="lbScreen" style="display:none">
     <div class="card" style="max-width:360px;max-height:85vh;overflow-y:auto;">
       <div class="o-title" style="font-size:1.5rem;margin-bottom:4px;">leaderboard</div>
@@ -99,7 +97,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
-  <!-- Admin login -->
   <div class="overlay" id="adminLoginScreen" style="display:none">
     <div class="card" style="max-width:280px;">
       <div class="o-title" style="font-size:1.2rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
@@ -110,7 +107,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
-  <!-- Admin panel — triple-tap score to open -->
   <div class="overlay" id="adminScreen" style="display:none">
     <div class="card" style="max-height:88vh;overflow-y:auto;">
       <div class="o-title" style="font-size:1.3rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
@@ -128,8 +124,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
         <div class="admin-label">IMPORT WALLETS</div>
         <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">one wallet per line, writes to both tables</div>
-        <textarea id="importData" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:10px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.65rem;height:80px;outline:none;resize:none;" placeholder="0x...
-0x..."></textarea>
+        <textarea id="importData" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:10px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.65rem;height:80px;outline:none;resize:none;" placeholder="0x...&#10;0x..."></textarea>
         <input class="o-input" id="importHandle" placeholder="@collab handle (optional)" style="margin-top:4px;">
         <button class="o-btn" onclick="importWallets()" style="font-size:.7rem;padding:9px;margin-top:4px;">import</button>
         <div id="importStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
@@ -148,10 +143,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     </div>
   </div>
 
-  <!-- Pause button (visible during game) -->
+  <!-- Pause button -->
   <button id="pauseBtn" style="display:none;position:absolute;top:10px;right:10px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;">II</button>
 
-  <!-- Persistent admin trigger — always visible, bottom-right corner -->
+  <!-- Mute button -->
+  <button id="muteBtn" style="display:none;position:absolute;top:10px;right:58px;z-index:40;background:rgba(10,20,8,0.85);border:1px solid rgba(74,222,128,0.25);border-radius:3px;color:rgba(74,222,128,0.8);font-size:0.7rem;padding:5px 9px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:2px;" onclick="toggleMute()">♩♩</button>
+
+  <!-- Admin trigger -->
   <div id="adminTrigger" onclick="adminTap()" style="position:fixed;bottom:0;right:0;width:48px;height:48px;z-index:200;cursor:default;-webkit-tap-highlight-color:transparent;"></div>
 </div>
 
@@ -166,7 +164,145 @@ var CONFIG_TABLE='tblAMYHI1S6OTihNO';
 var WIN_SCORE=500;
 var playerWallet='', playerHandle='';
 var SESSION_TOKEN=null;
-var WORKER_URL='https://gobinos-api.vercel.app'; // change to your vercel URL
+var WORKER_URL='https://gobinos-api.vercel.app';
+
+// ---- SOUND SYSTEM ----
+var _audioCtx=null;
+var soundOn=true;
+
+function getACtx(){
+  if(!_audioCtx) _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(_audioCtx.state==='suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function toggleMute(){
+  soundOn=!soundOn;
+  document.getElementById('muteBtn').textContent=soundOn?'♩♩':'ø♩';
+}
+
+// Gun / shoot — short sharp "pew"
+function sndShoot(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var o=c.createOscillator();
+    var g=c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type='square';
+    o.frequency.setValueAtTime(1200,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(400,c.currentTime+0.06);
+    g.gain.setValueAtTime(0.18,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.07);
+    o.start(c.currentTime); o.stop(c.currentTime+0.07);
+  }catch(e){}
+}
+
+// Explosion — noise burst when enemy dies
+function sndExplode(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var sr=c.sampleRate;
+    var len=Math.floor(sr*0.18);
+    var buf=c.createBuffer(1,len,sr);
+    var d=buf.getChannelData(0);
+    for(var i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-(i/len),1.5);
+    var src=c.createBufferSource();
+    src.buffer=buf;
+    var filt=c.createBiquadFilter();
+    filt.type='bandpass';
+    filt.frequency.value=280;
+    filt.Q.value=0.8;
+    var g=c.createGain();
+    g.gain.setValueAtTime(0.55,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.18);
+    src.connect(filt); filt.connect(g); g.connect(c.destination);
+    src.start(); src.stop(c.currentTime+0.18);
+  }catch(e){}
+}
+
+// Hit — low thud when goblin takes damage
+function sndHit(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var o=c.createOscillator();
+    var g=c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type='sawtooth';
+    o.frequency.setValueAtTime(220,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60,c.currentTime+0.22);
+    g.gain.setValueAtTime(0.35,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.22);
+    o.start(c.currentTime); o.stop(c.currentTime+0.22);
+    // extra noise layer
+    var sr=c.sampleRate;
+    var len=Math.floor(sr*0.1);
+    var buf=c.createBuffer(1,len,sr);
+    var dd=buf.getChannelData(0);
+    for(var i=0;i<len;i++) dd[i]=(Math.random()*2-1)*0.4;
+    var src=c.createBufferSource(); src.buffer=buf;
+    var g2=c.createGain();
+    g2.gain.setValueAtTime(0.2,c.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.1);
+    src.connect(g2); g2.connect(c.destination);
+    src.start(); src.stop(c.currentTime+0.1);
+  }catch(e){}
+}
+
+// Game over — descending doom tones
+function sndGameOver(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var freqs=[440,330,247,185];
+    freqs.forEach(function(f,i){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='sawtooth';
+      o.frequency.value=f;
+      var t=c.currentTime+i*0.2;
+      g.gain.setValueAtTime(0.22,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+      o.start(t); o.stop(t+0.28);
+    });
+  }catch(e){}
+}
+
+// Win — ascending goblin fanfare
+function sndWin(){
+  if(!soundOn) return;
+  try{
+    var c=getACtx();
+    var notes=[523,659,784,1047,1319];
+    notes.forEach(function(f,i){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='triangle';
+      o.frequency.value=f;
+      var t=c.currentTime+i*0.1;
+      g.gain.setValueAtTime(0.22,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+      o.start(t); o.stop(t+0.35);
+    });
+    // chord bloom at the end
+    var chord=[523,659,784];
+    chord.forEach(function(f){
+      var o=c.createOscillator();
+      var g=c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type='sine';
+      o.frequency.value=f;
+      var t=c.currentTime+0.55;
+      g.gain.setValueAtTime(0.12,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.8);
+      o.start(t); o.stop(t+0.8);
+    });
+  }catch(e){}
+}
 
 // ---- CANVAS SETUP ----
 var canvas=document.getElementById('gameCanvas');
@@ -176,7 +312,7 @@ var GW,GH,LANE_W,LANE_X,GOBLIN_Y;
 
 function resize(){
   GH=window.innerHeight;
-  GW=Math.min(window.innerWidth, Math.round(GH*(9/16)));
+  GW=Math.min(window.innerWidth,Math.round(GH*(9/16)));
   canvas.width=GW; canvas.height=GH;
   wrap.style.width=GW+'px'; wrap.style.height=GH+'px';
   LANE_W=Math.round(GW*0.54);
@@ -184,62 +320,56 @@ function resize(){
   GOBLIN_Y=GH-Math.round(GH*0.12);
 }
 resize();
-window.addEventListener('resize', function(){
-  resize();
-  if(!gameRunning) drawBG();
-});
+window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
 
 // ---- GAME STATE ----
-var score=0, wave=1, lives=3, gameRunning=false;
+var score=0,wave=1,lives=3,gameRunning=false;
 var GOBLIN_X=GW/2;
-var enemies=[], projectiles=[], particles=[], missTexts=[];
-var spawnTimer=0, waveTimer=0, lastTime=0;
-var goblinAnim=0, hitFlash=0;
+var enemies=[],projectiles=[],particles=[],missTexts=[];
+var spawnTimer=0,waveTimer=0,lastTime=0;
+var goblinAnim=0,hitFlash=0;
 var keys={};
 var hasPlayed=false;
-var touchHeld=false, touchStartX=0, touchStartTime=0;
-var autoShootInterval=null;
+var touchHeld=false,touchStartX=0,touchStartTime=0;
 var autoShootTimer=0;
 var gamePaused=false;
 
 function startAutoShoot(){ touchHeld=true; }
 function stopAutoShoot(){ touchHeld=false; }
 
-// ---- HELPERS ----
 function scaleX(cx){
   var r=canvas.getBoundingClientRect();
   return (cx-r.left)*(canvas.width/r.width);
 }
 function clampGoblin(x){
-  return Math.max(LANE_X+22, Math.min(LANE_X+LANE_W-22, x));
+  return Math.max(LANE_X+22,Math.min(LANE_X+LANE_W-22,x));
 }
 
-// pause button — separate handlers to avoid double-fire on mobile
-document.getElementById('pauseBtn').addEventListener('touchend', function(e){
+document.getElementById('pauseBtn').addEventListener('touchend',function(e){
   e.preventDefault(); e.stopPropagation(); togglePause();
 },{passive:false});
-document.getElementById('pauseBtn').addEventListener('click', function(e){
+document.getElementById('pauseBtn').addEventListener('click',function(e){
   if(e._fromTouch) return; togglePause();
 });
 
 // ---- INPUT ----
-document.addEventListener('keydown', function(e){ keys[e.key]=true; });
-document.addEventListener('keyup',   function(e){ keys[e.key]=false; });
+document.addEventListener('keydown',function(e){ keys[e.key]=true; });
+document.addEventListener('keyup',function(e){ keys[e.key]=false; });
 
-canvas.addEventListener('touchstart', function(e){
+canvas.addEventListener('touchstart',function(e){
   e.preventDefault();
   var tx=scaleX(e.touches[0].clientX);
   touchStartX=tx; touchStartTime=Date.now(); touchHeld=true;
   if(gameRunning){ GOBLIN_X=clampGoblin(tx); startAutoShoot(); }
 },{passive:false});
 
-canvas.addEventListener('touchmove', function(e){
+canvas.addEventListener('touchmove',function(e){
   e.preventDefault();
   if(!gameRunning) return;
   GOBLIN_X=clampGoblin(scaleX(e.touches[0].clientX));
 },{passive:false});
 
-canvas.addEventListener('touchend', function(e){
+canvas.addEventListener('touchend',function(e){
   e.preventDefault(); touchHeld=false; stopAutoShoot();
   if(!gameRunning) return;
   var tx=scaleX(e.changedTouches[0].clientX);
@@ -247,18 +377,14 @@ canvas.addEventListener('touchend', function(e){
   if(Date.now()-touchStartTime<300 && moved<25) shoot();
 },{passive:false});
 
-canvas.addEventListener('click', function(e){
+canvas.addEventListener('click',function(e){
   if(!gameRunning) return; shoot();
 });
-// hold mouse to shoot continuously on desktop
-canvas.addEventListener('mousedown', function(e){
-  if(!gameRunning) return;
-  startAutoShoot();
+canvas.addEventListener('mousedown',function(e){
+  if(!gameRunning) return; startAutoShoot();
 });
-document.addEventListener('mouseup', function(){
-  stopAutoShoot();
-});
-canvas.addEventListener('mousemove', function(e){
+document.addEventListener('mouseup',function(){ stopAutoShoot(); });
+canvas.addEventListener('mousemove',function(e){
   if(!gameRunning) return;
   var mx=scaleX(e.clientX);
   if(mx>LANE_X && mx<LANE_X+LANE_W) GOBLIN_X=mx;
@@ -267,67 +393,52 @@ canvas.addEventListener('mousemove', function(e){
 // ---- SHOOT ----
 function shoot(){
   if(!gameRunning) return;
-  projectiles.push({x:GOBLIN_X, y:GOBLIN_Y-GH*0.08, vy:-(14+wave*0.3), r:5, dead:false, trail:[]});
+  sndShoot();
+  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(14+wave*0.3),r:5,dead:false,trail:[]});
 }
 
 // ---- DRAW BG ----
 function drawBG(){
-  // cave walls
   var g=ctx.createLinearGradient(0,0,0,GH);
   g.addColorStop(0,'#040803'); g.addColorStop(1,'#080f05');
   ctx.fillStyle=g; ctx.fillRect(0,0,GW,GH);
-
-  // left wall stone
   for(var y=0;y<GH;y+=7){
     ctx.fillStyle=['#141a0c','#111608','#181f0f','#0f1307','#1a2210'][Math.floor(y/7)%5];
     ctx.fillRect(0,y,LANE_X,7);
   }
-  // right wall stone  
   for(var y=0;y<GH;y+=7){
     ctx.fillStyle=['#161c0e','#121709','#1a2110','#111508','#1c2413'][Math.floor(y/7)%5];
     ctx.fillRect(LANE_X+LANE_W,y,GW-(LANE_X+LANE_W),7);
   }
-
-  // jagged left edge
   ctx.fillStyle='#090e06';
   for(var y=0;y<GH;y+=18){
     var j=5+Math.sin(y*0.28)*4+Math.cos(y*0.15)*3;
     ctx.fillRect(LANE_X-j,y,j+1,20);
   }
-  // jagged right edge
   for(var y=0;y<GH;y+=18){
     var j=5+Math.sin(y*0.28+2)*4+Math.cos(y*0.18)*3;
     ctx.fillRect(LANE_X+LANE_W,y,j+1,20);
   }
-  // wall edge glow strips
   ctx.fillStyle='rgba(42,92,42,0.12)';
   ctx.fillRect(LANE_X-2,0,3,GH);
   ctx.fillRect(LANE_X+LANE_W-1,0,3,GH);
-
-  // lane
   var lg=ctx.createLinearGradient(LANE_X,0,LANE_X+LANE_W,0);
   lg.addColorStop(0,'#090f06'); lg.addColorStop(0.5,'#0c1508'); lg.addColorStop(1,'#090f06');
   ctx.fillStyle=lg; ctx.fillRect(LANE_X,0,LANE_W,GH);
-
-  // floor glow
   var fg=ctx.createRadialGradient(GW/2,GH,0,GW/2,GH,GH*0.45);
   fg.addColorStop(0,'rgba(42,92,42,0.14)'); fg.addColorStop(1,'transparent');
   ctx.fillStyle=fg; ctx.fillRect(LANE_X,0,LANE_W,GH);
-
-  // slime drips
   ctx.fillStyle='rgba(74,222,128,0.12)';
   for(var i=0;i<3;i++){
-    var dx=LANE_X-6-i*9, dy=(i*151)%GH, dh=28+i*18;
+    var dx=LANE_X-6-i*9,dy=(i*151)%GH,dh=28+i*18;
     ctx.fillRect(dx,dy,3,dh);
     ctx.beginPath(); ctx.arc(dx+1.5,dy+dh,3.5,0,Math.PI*2); ctx.fill();
   }
   for(var i=0;i<3;i++){
-    var dx=LANE_X+LANE_W+3+i*9, dy=(i*103+60)%GH, dh=22+i*14;
+    var dx=LANE_X+LANE_W+3+i*9,dy=(i*103+60)%GH,dh=22+i*14;
     ctx.fillRect(dx,dy,3,dh);
     ctx.beginPath(); ctx.arc(dx+1.5,dy+dh,3,0,Math.PI*2); ctx.fill();
   }
-
-  // skulls on walls
   var skp=[[LANE_X*0.45,GH*0.22],[LANE_X*0.55,GH*0.62],[GW-(LANE_X*0.5),GH*0.38],[GW-(LANE_X*0.4),GH*0.78]];
   ctx.fillStyle='rgba(180,170,140,0.22)';
   for(var s=0;s<skp.length;s++){
@@ -341,41 +452,37 @@ function drawBG(){
   }
 }
 
-// ---- DRAW GOBLIN (emoji 🧌) ----
+// ---- DRAW GOBLIN ----
 function drawGoblin(){
-  var x=GOBLIN_X, y=GOBLIN_Y;
+  var x=GOBLIN_X,y=GOBLIN_Y;
   var bob=Math.sin(goblinAnim)*2.5;
   var size=Math.round(GH*0.072);
   ctx.save();
-  ctx.translate(x, y+bob);
+  ctx.translate(x,y+bob);
   if(hitFlash>0){ ctx.shadowColor='#ff2200'; ctx.shadowBlur=24; }
   ctx.font=size+'px serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText('\u{1F9CC}', 0, 0);
+  ctx.fillText('\u{1F9CC}',0,0);
   ctx.shadowBlur=0;
   ctx.restore();
 }
 
-// ---- DRAW ENEMY (zombie mosquito) ----
+// ---- DRAW ENEMY ----
 function drawEnemy(e){
   ctx.save();
-  ctx.translate(e.x, e.y);
+  ctx.translate(e.x,e.y);
   var s=Math.sin(e.wobble)*0.07;
   ctx.scale(1+s,1-s);
-  // wings
   ctx.globalAlpha=0.5;
   ctx.fillStyle='#1c3010';
   ctx.beginPath(); ctx.ellipse(-e.r*.55,-e.r*.35,e.r*.8,e.r*.25,-0.5,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(e.r*.55,-e.r*.35,e.r*.8,e.r*.25,0.5,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha=1;
-  // body
   ctx.fillStyle=e.flash>0?'#ff5533':'#1a2e0e';
   ctx.beginPath(); ctx.ellipse(0,0,e.r*.6,e.r*.45,0,0,Math.PI*2); ctx.fill();
-  // stinger
   ctx.strokeStyle='#0a1505'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(0,e.r*.45); ctx.lineTo(0,e.r*1.15); ctx.stroke();
-  // red zombie eyes
   ctx.fillStyle='#ff1100';
   ctx.beginPath(); ctx.arc(-e.r*.2,0,2,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(e.r*.2,0,2,0,Math.PI*2); ctx.fill();
@@ -399,75 +506,72 @@ function drawProjectile(p){
 // ---- HUD ----
 function drawHUD(){
   var fs=Math.round(GH*0.023);
-  // score
   ctx.font='bold '+fs+'px "Space Mono"';
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   ctx.fillStyle='rgba(74,222,128,0.85)';
-  ctx.fillText(String(score).padStart(6,'0'), GW/2, GH-Math.round(GH*0.042));
-  // progress bar
-  var bw=LANE_W*0.58, bh=4, bx=LANE_X+LANE_W*0.21, by=GH-Math.round(GH*0.028);
+  ctx.fillText(String(score).padStart(6,'0'),GW/2,GH-Math.round(GH*0.042));
+  var bw=LANE_W*0.58,bh=4,bx=LANE_X+LANE_W*0.21,by=GH-Math.round(GH*0.028);
   ctx.fillStyle='rgba(74,222,128,0.12)'; ctx.fillRect(bx,by,bw,bh);
   ctx.fillStyle='rgba(74,222,128,0.55)'; ctx.fillRect(bx,by,bw*Math.min(score/WIN_SCORE,1),bh);
-  // lives
   ctx.font=Math.round(GH*0.028)+'px serif';
   ctx.textAlign='left';
-  for(var i=0;i<3;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}', LANE_X+8+i*Math.round(GH*0.036), Math.round(GH*0.052));
-  // wave
+  for(var i=0;i<3;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}',LANE_X+8+i*Math.round(GH*0.036),Math.round(GH*0.052));
   ctx.font=Math.round(GH*0.016)+'px "Space Mono"';
   ctx.textAlign='right'; ctx.fillStyle='rgba(107,143,62,0.7)';
-  ctx.fillText('W'+wave, LANE_X+LANE_W-8, Math.round(GH*0.05));
+  ctx.fillText('W'+wave,LANE_X+LANE_W-8,Math.round(GH*0.05));
+  // GTD progress hint
+  var remaining=WIN_SCORE-score;
+  if(remaining>0){
+    ctx.font=Math.round(GH*0.013)+'px "Space Mono"';
+    ctx.textAlign='center'; ctx.fillStyle='rgba(74,222,128,0.3)';
+    ctx.fillText(remaining+' kills to GTD',GW/2,GH-Math.round(GH*0.055));
+  }
 }
 
 // ---- GAME LOOP ----
 function gameLoop(ts){
   if(!gameRunning) return;
-  var dt=Math.min((ts-lastTime)/1000, 0.05);
+  var dt=Math.min((ts-lastTime)/1000,0.05);
   lastTime=ts;
   goblinAnim+=dt*3;
   if(hitFlash>0) hitFlash-=dt;
 
-  // keyboard
   var spd=GW*0.55*dt;
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
   if(keys[' ']){ if(!keys._sw) shoot(); keys._sw=true; } else keys._sw=false;
 
-  // auto-shoot: touch hold (mobile) or mouse hold (pc) — game-loop based
   if(touchHeld){
     autoShootTimer+=dt;
-    var shootRate=Math.max(0.055, 0.28-(wave-1)*0.018);
+    var shootRate=Math.max(0.055,0.28-(wave-1)*0.018);
     if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(); }
   } else { autoShootTimer=0; }
 
-  // spawn
   spawnTimer+=dt;
-  var rate=Math.max(0.45, 1.7-wave*0.11);
+  var rate=Math.max(0.45,1.7-wave*0.11);
   if(spawnTimer>=rate){
     spawnTimer=0;
     var n=Math.min(Math.floor(wave/4)+1,2);
     for(var i=0;i<n;i++){
       enemies.push({
-        x:LANE_X+Math.random()*LANE_W, y:-18,
+        x:LANE_X+Math.random()*LANE_W,y:-18,
         r:10+Math.random()*5,
         spd:1.1+wave*0.11+Math.random()*0.45,
         wobble:Math.random()*Math.PI*2,
-        hp:wave>=10?2:1, flash:0, dead:false
+        hp:wave>=10?2:1,flash:0,dead:false
       });
     }
   }
-  // wave
   waveTimer+=dt;
   if(waveTimer>=20){ waveTimer=0; wave++; }
 
-  // update enemies
   for(var i=0;i<enemies.length;i++){
     var e=enemies[i];
     e.y+=e.spd; e.wobble+=0.11;
     e.x+=Math.sin(e.wobble)*0.55;
-    e.x=Math.max(LANE_X+e.r, Math.min(LANE_X+LANE_W-e.r, e.x));
+    e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x));
     if(e.flash>0) e.flash-=dt;
   }
-  // update projectiles
   for(var i=0;i<projectiles.length;i++){
     var p=projectiles[i];
     p.trail.push({x:p.x,y:p.y});
@@ -475,12 +579,10 @@ function gameLoop(ts){
     p.y+=p.vy;
     if(p.y<-20) p.dead=true;
   }
-  // update particles
   for(var i=0;i<particles.length;i++){
     var p=particles[i];
     p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4;
   }
-  // update miss texts
   for(var i=0;i<missTexts.length;i++){
     var m=missTexts[i]; m.y-=1.1; m.life-=dt*2;
   }
@@ -494,8 +596,9 @@ function gameLoop(ts){
         p.dead=true; e.hp--; e.flash=0.16;
         if(e.hp<=0){
           e.dead=true; score++;
+          sndExplode();
           for(var k=0;k<8;k++){
-            var a=Math.random()*Math.PI*2, sp=2+Math.random()*4;
+            var a=Math.random()*Math.PI*2,sp=2+Math.random()*4;
             particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:2+Math.random()*2.5,col:Math.random()>.5?'#4ade80':'#2a7a2a'});
           }
           if(score>=WIN_SCORE){ winGame(); return; }
@@ -512,35 +615,32 @@ function gameLoop(ts){
     if(e.y>GOBLIN_Y-gr){
       e.dead=true; lives--;
       hitFlash=0.4;
-      missTexts.push({x:e.x, y:GOBLIN_Y-gr*2, life:1});
+      sndHit();
+      missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1});
       if(lives<=0){ gameOver(); return; }
     }
   }
 
-  // clean arrays
   enemies=enemies.filter(function(e){return !e.dead;});
   projectiles=projectiles.filter(function(p){return !p.dead;});
   particles=particles.filter(function(p){return p.life>0;});
   missTexts=missTexts.filter(function(m){return m.life>0;});
 
-  // draw
   drawBG();
   for(var i=0;i<enemies.length;i++) drawEnemy(enemies[i]);
   for(var i=0;i<projectiles.length;i++) drawProjectile(projectiles[i]);
-  // particles
   for(var i=0;i<particles.length;i++){
     var p=particles[i];
     ctx.globalAlpha=p.life; ctx.fillStyle=p.col;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha=1;
-  // miss texts
   ctx.font='bold '+Math.round(GH*0.02)+'px "Space Mono"';
   ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   for(var i=0;i<missTexts.length;i++){
     var m=missTexts[i];
     ctx.globalAlpha=m.life; ctx.fillStyle='#cc2200';
-    ctx.fillText('MISS', m.x, m.y);
+    ctx.fillText('MISS',m.x,m.y);
   }
   ctx.globalAlpha=1;
   drawGoblin();
@@ -548,18 +648,16 @@ function gameLoop(ts){
   requestAnimationFrame(gameLoop);
 }
 
-// ---- GAME CONTROL ----
-// ---- ADMIN ACCESS — works everywhere ----
-var adminTapCount=0, adminTapTimer=null;
+// ---- ADMIN ACCESS ----
+var adminTapCount=0,adminTapTimer=null;
 function adminTap(){
   adminTapCount++;
   if(adminTapTimer) clearTimeout(adminTapTimer);
   adminTapTimer=setTimeout(function(){ adminTapCount=0; },700);
   if(adminTapCount>=3){ adminTapCount=0; openAdmin(); }
 }
-// Shift+G+G keyboard shortcut
-var gCount=0, gTimer;
-document.addEventListener('keydown', function(e){
+var gCount=0,gTimer;
+document.addEventListener('keydown',function(e){
   if(e.key==='G' && e.shiftKey){
     gCount++;
     clearTimeout(gTimer);
@@ -576,7 +674,7 @@ function pauseGame(){
   gamePaused=true; gameRunning=false; stopAutoShoot();
   document.getElementById('pauseScore').textContent=score+' kills so far';
   document.getElementById('pauseScreen').style.display='flex';
-  document.getElementById('pauseBtn').textContent='GO';
+  document.getElementById('pauseBtn').textContent='▶';
 }
 function resumeGame(){
   document.getElementById('pauseScreen').style.display='none';
@@ -602,12 +700,10 @@ function validateAndStart(){
     err.textContent='drop your handle'; err.style.display='block'; return;
   }
   playerWallet=w; playerHandle=t;
-  // remember for next time
-  try{ localStorage.setItem('gobWallet',w); localStorage.setItem('gobHandle',t); } catch(e){}
+  try{ localStorage.setItem('gobWallet',w); localStorage.setItem('gobHandle',t); }catch(e){}
   startGame();
 }
 
-// on load - check if returning user, skip form if already have wallet
 (function(){
   try{
     var w=localStorage.getItem('gobWallet');
@@ -616,7 +712,6 @@ function validateAndStart(){
       playerWallet=w; playerHandle=t;
       hasPlayed=true;
       var _lb=document.getElementById('lbStartBtn'); if(_lb) _lb.style.display='block';
-      // pre-fill but hide the fields, show "playing as" instead
       document.getElementById('startWallet').value=w;
       document.getElementById('startTwitter').value=t;
       var card=document.querySelector('#startScreen .card');
@@ -624,18 +719,17 @@ function validateAndStart(){
       info.id='returningInfo';
       info.style='font-size:.44rem;color:rgba(74,222,128,.35);letter-spacing:1px;margin-bottom:10px;margin-top:-8px;';
       info.innerHTML='playing as <span style="color:rgba(74,222,128,.8);">'+escHtml(t)+'</span> <a onclick="clearPlayer()" style="color:rgba(204,34,0,.6);cursor:pointer;text-decoration:underline;">not you?</a>';
-      // hide inputs, show info
       document.getElementById('startWallet').style.display='none';
       document.getElementById('startTwitter').style.display='none';
       document.getElementById('startErr').style.display='none';
       var sub=card.querySelector('.o-sub');
-      sub.parentNode.insertBefore(info, sub.nextSibling);
+      sub.parentNode.insertBefore(info,sub.nextSibling);
     }
-  } catch(e){}
+  }catch(e){}
 })();
 
 function clearPlayer(){
-  try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); } catch(e){}
+  try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); }catch(e){}
   playerWallet=''; playerHandle='';
   hasPlayed=false;
   var lb=document.getElementById('lbStartBtn'); if(lb) lb.style.display='none';
@@ -648,16 +742,16 @@ function clearPlayer(){
 function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block';
+  document.getElementById('muteBtn').style.display='block';
   score=0; wave=1; lives=3;
   GOBLIN_X=GW/2; gamePaused=false;
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
   SESSION_TOKEN=null;
-  // get session token from worker
   fetch(WORKER_URL+'/api/start',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({wallet:playerWallet, handle:playerHandle})
+    body:JSON.stringify({wallet:playerWallet,handle:playerHandle})
   }).then(function(r){return r.json();}).then(function(d){
     SESSION_TOKEN=d.token||null;
   }).catch(function(){});
@@ -665,11 +759,13 @@ function startGame(){
   lastTime=performance.now();
   requestAnimationFrame(gameLoop);
 }
+
 function goMenu(){
   ['deadScreen','winScreen','pauseScreen','lbScreen'].forEach(function(id){
     document.getElementById(id).style.display='none';
   });
   document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('muteBtn').style.display='none';
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
   if(hasPlayed){ var lb=document.getElementById('lbStartBtn'); if(lb) lb.style.display='block'; }
@@ -680,6 +776,7 @@ function restartGame(){
   document.getElementById('winScreen').style.display='none';
   document.getElementById('pauseScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('muteBtn').style.display='none';
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
   if(hasPlayed){
@@ -687,38 +784,37 @@ function restartGame(){
     if(lb) lb.style.display='block';
   }
 }
+
 function gameOver(){
   hasPlayed=true;
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('deadSub').textContent=score+' kills mosquitos won';
+  document.getElementById('deadSub').textContent=score+' kills — mosquitos won';
   document.getElementById('deadScreen').style.display='flex';
-  // write score to leaderboard
+  sndGameOver();
   fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD,{
     method:'POST',
     headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({fields:{Twitter:playerHandle,Wallet:playerWallet,Score:score}})
   }).catch(function(){});
 }
+
 function winGame(){
   hasPlayed=true;
   gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
   var cb=document.getElementById('claimBtn');
-  cb.disabled=false; cb.textContent='claim my spot'; cb.style.background='';
-  document.getElementById('winErr').style.display='none';
-  var cb=document.getElementById('claimBtn');
-  cb.disabled=false; cb.textContent='claim my spot'; cb.style.background='';
+  cb.disabled=false; cb.textContent='claim GTD spot'; cb.style.background='';
   document.getElementById('winErr').style.display='none';
   document.getElementById('winScreen').style.display='flex';
+  sndWin();
 }
+
 async function claimSpot(){
   var btn=document.getElementById('claimBtn');
   var err=document.getElementById('winErr');
   btn.disabled=true; btn.textContent='locking in...';
-
-  // direct airtable write (fallback until worker is live)
   var post=function(t){
     return fetch('https://api.airtable.com/v0/'+BASE+'/'+t,{
       method:'POST',
@@ -728,10 +824,10 @@ async function claimSpot(){
   };
   try{
     await post(TABLE); await post(MASTERLIST); await post(LEADERBOARD);
-    btn.textContent='ur in goblin';
+    btn.textContent='ur GTD goblin 🧌';
     btn.style.background='rgba(42,92,42,0.8)';
     var pa=document.querySelector('#winScreen .o-btn.red'); if(pa) pa.style.display='none';
-  } catch(e){
+  }catch(e){
     btn.disabled=false;
     btn.textContent='broke — try again';
   }
@@ -745,7 +841,7 @@ function showLeaderboard(){
   lbRefreshTimer=setInterval(function(){
     if(document.getElementById('lbScreen').style.display!=='none') loadLbData();
     else { clearInterval(lbRefreshTimer); lbRefreshTimer=null; }
-  }, 15000);
+  },15000);
   loadLbData();
 }
 function loadLbData(){
@@ -757,8 +853,7 @@ function loadLbData(){
       list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>';
       return;
     }
-    // dedupe by wallet, keep highest score
-    var seen={}, top=[];
+    var seen={},top=[];
     for(var i=0;i<d.records.length;i++){
       var r=d.records[i].fields;
       if(!r.Wallet) continue;
@@ -770,7 +865,6 @@ function loadLbData(){
     for(var k in seen) top.push(seen[k]);
     top.sort(function(a,b){return b.score-a.score;});
     top=top.slice(0,10);
-
     var medals=['[1]','[2]','[3]'];
     var out='';
     for(var i=0;i<top.length;i++){
@@ -798,23 +892,19 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 async function saveAdminScore(){
   var v=parseInt(document.getElementById('adminScore').value)||500;
   WIN_SCORE=v;
-  // upsert to config table
   try{
     var r=await fetch('https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE+'?filterByFormula={Name}="WinScore"',{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
     var d=await r.json();
-    var method='POST', url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
+    var method='POST',url='https://api.airtable.com/v0/'+BASE+'/'+CONFIG_TABLE;
     var body={fields:{Name:'WinScore',Value:String(v)}};
     if(d.records&&d.records.length){ method='PATCH'; url+='/'+d.records[0].id; }
     await fetch(url,{method:method,headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
     document.getElementById('adminScreen').style.display='none';
     alert('saved! win score = '+v);
-  } catch(e){ alert('failed to save'); }
+  }catch(e){ alert('failed to save'); }
 }
 
-// ---- ADMIN ----
 var ADMIN_PASS='gobinos2024';
-var checkerEnabled=true;
-
 function openAdmin(){
   document.getElementById('adminLoginScreen').style.display='flex';
   document.getElementById('adminPass').value='';
@@ -825,35 +915,31 @@ function checkAdminPass(){
   if(p===ADMIN_PASS){
     document.getElementById('adminLoginScreen').style.display='none';
     document.getElementById('adminScreen').style.display='flex';
-  } else {
+  }else{
     document.getElementById('adminPassErr').textContent='wrong passcode';
     document.getElementById('adminPassErr').style.display='block';
   }
 }
 
-
-// importWallets (old file version removed)
-
-// ---- ADMIN FUNCTIONS ----
 async function exportWallets(type){
-  var tbl = type==='masterlist' ? MASTERLIST : TABLE;
-  var name = type==='masterlist' ? 'gobinos-masterlist' : 'gobinos-allowlist';
-  var allRecords=[], offset='';
+  var tbl=type==='masterlist'?MASTERLIST:TABLE;
+  var name=type==='masterlist'?'gobinos-masterlist':'gobinos-allowlist';
+  var allRecords=[],offset='';
   try{
-    do {
+    do{
       var url='https://api.airtable.com/v0/'+BASE+'/'+tbl+'?pageSize=100'+(offset?'&offset='+offset:'');
       var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
       var d=await r.json();
       allRecords=allRecords.concat(d.records||[]);
       offset=d.offset||'';
-    } while(offset);
+    }while(offset);
     var lines=allRecords.filter(function(r){return r.fields.Wallet;}).map(function(r){return r.fields.Wallet;});
     var blob=new Blob([lines.join('\n')],{type:'text/plain'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
     a.download=name+'.txt';
     a.click();
-  } catch(e){ alert('export failed'); }
+  }catch(e){ alert('export failed'); }
 }
 
 async function importWallets(){
@@ -866,12 +952,12 @@ async function importWallets(){
   status.textContent='importing '+wallets.length+' wallets...'; status.style.display='block';
   var ok=0;
   for(var i=0;i<wallets.length;i++){
-    var fields={Twitter:handle, Wallet:wallets[i]};
+    var fields={Twitter:handle,Wallet:wallets[i]};
     try{
       await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
       await fetch('https://api.airtable.com/v0/'+BASE+'/'+MASTERLIST,{method:'POST',headers:{'Authorization':'Bearer '+AIRTABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({fields:fields})});
       ok++;
-    } catch(e){}
+    }catch(e){}
     if(i%10===0) status.textContent='importing... '+ok+'/'+wallets.length;
   }
   status.textContent='done! '+ok+' wallets imported';
@@ -882,14 +968,14 @@ async function clearLeaderboard(){
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus');
   status.textContent='wiping...'; status.style.display='block';
-  var offset='', ids=[];
-  do {
+  var offset='',ids=[];
+  do{
     var url='https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?pageSize=100'+(offset?'&offset='+offset:'');
     var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
     var d=await r.json();
     ids=ids.concat((d.records||[]).map(function(r){return r.id;}));
     offset=d.offset||'';
-  } while(offset);
+  }while(offset);
   for(var i=0;i<ids.length;i+=10){
     var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');
     await fetch('https://api.airtable.com/v0/'+BASE+'/'+LEADERBOARD+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
@@ -901,15 +987,14 @@ async function clearPhase(){
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus');
   status.textContent='clearing...'; status.style.display='block';
-  var offset='', ids=[];
-  do {
+  var offset='',ids=[];
+  do{
     var url='https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?pageSize=100'+(offset?'&offset='+offset:'');
     var r=await fetch(url,{headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
     var d=await r.json();
     ids=ids.concat((d.records||[]).map(function(r){return r.id;}));
     offset=d.offset||'';
-  } while(offset);
-  // delete in batches of 10
+  }while(offset);
   for(var i=0;i<ids.length;i+=10){
     var batch=ids.slice(i,i+10).map(function(id){return 'records[]='+id;}).join('&');
     await fetch('https://api.airtable.com/v0/'+BASE+'/'+TABLE+'?'+batch,{method:'DELETE',headers:{'Authorization':'Bearer '+AIRTABLE_KEY}});
@@ -917,7 +1002,6 @@ async function clearPhase(){
   status.textContent='cleared! '+ids.length+' records deleted';
 }
 
-// ---- CHECKER ----
 function checkWallet(){
   var w=document.getElementById('checkerWallet').value.trim();
   var err=document.getElementById('checkerErr');
@@ -940,7 +1024,7 @@ function checkWallet(){
       res.style.border='1px solid rgba(74,222,128,0.4)';
       res.style.color='#4ade80';
       res.textContent='ur on the goblist 🧌';
-    } else {
+    }else{
       res.style.background='rgba(80,0,0,0.3)';
       res.style.border='1px solid rgba(204,34,0,0.4)';
       res.style.color='#cc2200';
