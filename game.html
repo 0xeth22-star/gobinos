@@ -17,7 +17,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#4ade80,transparent);}
 .o-title{font-family:'Creepster',cursive;font-size:2.2rem;color:#4ade80;letter-spacing:4px;margin-bottom:6px;}
 .o-sub{font-size:0.56rem;color:rgba(232,220,200,0.45);letter-spacing:1px;line-height:2.3;margin-bottom:20px;}
-.o-btn{width:100%;padding:14px;background:#1e4a1e;border:1px solid rgba(74,222,128,0.35);border-radius:4px;color:#e8dcc8;font-family:'Creepster',cursive;font-size:1.1rem;letter-spacing:3px;cursor:pointer;text-transform:uppercase;margin-top:8px;transition:background .2s;}
+.o-btn{width:100%;padding:14px;background:#1e4a1e;border:1px solid rgba(74,222,128,0.35);border-radius:4px;color:#e8dcc8;font-family:'Creepster',cursive;font-size:1.1rem;letter-spacing:3px;cursor:pointer;text-transform:uppercase;margin-top:8px;transition:background .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .o-btn:hover{background:#2a5c2a;}
 .o-btn.red{background:rgba(80,0,0,.5);border-color:rgba(204,34,0,.4);font-size:.85rem;}
 .o-input{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:11px 14px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.75rem;outline:none;margin-bottom:8px;text-align:center;letter-spacing:1px;}
@@ -90,8 +90,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 
   <div class="overlay" id="lbScreen" style="display:none">
     <div class="card" style="max-width:360px;max-height:85vh;overflow-y:auto;">
-      <div class="o-title" style="font-size:1.5rem;margin-bottom:4px;">leaderboard</div>
-      <div style="font-size:.45rem;color:rgba(74,222,128,.4);letter-spacing:3px;margin-bottom:18px;">TOP GOBLINS</div>
+      <div class="o-title" style="font-size:1.5rem;margin-bottom:12px;">leaderboard</div>
+      <div style="display:flex;gap:6px;margin-bottom:16px;justify-content:center;">
+        <button id="lbTabAll" onclick="_gob.setLbTab('all')" style="flex:1;padding:7px 4px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.5);border-radius:3px;color:#4ade80;font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:2px;cursor:pointer;">ALL TIME</button>
+        <button id="lbTabWeek" onclick="_gob.setLbTab('week')" style="flex:1;padding:7px 4px;background:transparent;border:1px solid rgba(74,222,128,0.2);border-radius:3px;color:rgba(74,222,128,0.4);font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:2px;cursor:pointer;">THIS WEEK</button>
+        <button id="lbTabDay" onclick="_gob.setLbTab('day')" style="flex:1;padding:7px 4px;background:transparent;border:1px solid rgba(74,222,128,0.2);border-radius:3px;color:rgba(74,222,128,0.4);font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:2px;cursor:pointer;">TODAY</button>
+      </div>
       <div id="lbList" style="text-align:left;"></div>
       <button class="o-btn" onclick="document.getElementById('lbScreen').style.display='none'" style="margin-top:16px;font-size:.8rem;padding:10px;">back</button>
       <button class="o-btn" onclick="_gob.goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.25);font-size:.7rem;padding:8px;letter-spacing:2px;color:rgba(232,220,200,0.35);margin-top:4px;">menu</button>
@@ -112,10 +116,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
     <div class="card" style="max-height:88vh;overflow-y:auto;">
       <div class="o-title" style="font-size:1.3rem;color:rgba(74,222,128,.6);margin-bottom:16px;">admin</div>
       <div class="admin-label">WIN SCORE</div>
-      <input class="o-input" id="adminScore" value="500" style="margin-bottom:6px;">
+      <input class="o-input" id="adminScore" value="9999" style="margin-bottom:6px;">
       <button class="o-btn" onclick="_gob.saveAdminScore()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
       <div class="admin-label">GTD CAP</div>
-      <input class="o-input" id="adminCap" value="500" style="margin-bottom:6px;">
+      <input class="o-input" id="adminCap" value="350" style="margin-bottom:6px;">
       <button class="o-btn" onclick="_gob.saveAdminCap()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
       <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
         <div class="admin-label">EXPORT WALLETS</div>
@@ -137,6 +141,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
         <div class="admin-label">LEADERBOARD</div>
         <button class="o-btn red" onclick="_gob.clearLeaderboard()" style="font-size:.7rem;padding:9px;margin-top:6px;">wipe leaderboard</button>
+      </div>
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
+        <div class="admin-label">SNAPSHOT</div>
+        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">top 50 → og_list + tweet copy</div>
+        <button class="o-btn" onclick="_gob.runSnapshot()" style="font-size:.7rem;padding:9px;margin-top:6px;border-color:rgba(74,222,128,0.5);">run snapshot</button>
+        <div id="snapshotStatus" style="font-size:.45rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
+        <textarea id="snapshotTweet" style="display:none;width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(74,222,128,.3);border-radius:4px;padding:8px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.58rem;height:120px;outline:none;resize:none;margin-top:8px;"></textarea>
+      </div>
+      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
+        <div class="admin-label">OG SNAPSHOT</div>
+        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">pulls top 50 from leaderboard → writes to og_list</div>
+        <button class="o-btn" onclick="_gob.takeSnapshot()" style="font-size:.7rem;padding:9px;margin-top:4px;background:rgba(20,60,20,0.8);border-color:rgba(74,222,128,0.4);">take snapshot</button>
+        <div id="snapshotStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
+        <div id="snapshotList" style="margin-top:10px;max-height:160px;overflow-y:auto;display:none;"></div>
       </div>
       <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'" style="font-size:.75rem;padding:10px;margin-top:12px;background:transparent;">close</button>
     </div>
@@ -161,7 +179,7 @@ function sbPost(t,body,prefer){ return fetch(SB+'/'+t,{method:'POST',headers:sbH
 function sbPatch(t,qs,body){ return fetch(SB+'/'+t+'?'+qs,{method:'PATCH',headers:sbH({'Prefer':'return=representation'}),body:JSON.stringify(body)}).then(function(r){return r.json();}); }
 function sbDelete(t,qs){ return fetch(SB+'/'+t+'?'+qs,{method:'DELETE',headers:sbH()}); }
 
-var WIN_SCORE=500, GTD_CAP=500;
+var WIN_SCORE=9999, GTD_CAP=350;
 var playerWallet='', playerHandle='';
 var _audioCtx=null, soundOn=true;
 
@@ -298,7 +316,7 @@ function shoot(){
   if(_shootCount>8){ _botFlagged=true; gameRunning=false; document.getElementById('deadSub').textContent='nice try'; document.getElementById('deadScreen').style.display='flex'; sndGameOver(); stopBgMusic(); return; }
   _lastShot=now;
   sndShoot();
-  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(14+wave*0.3),r:5,dead:false,trail:[]});
+  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(11+wave*0.18),r:5,dead:false,trail:[]});
 }
 
 function drawBG(){
@@ -331,18 +349,73 @@ function drawGoblin(){
 
 function drawEnemy(e){
   ctx.save(); ctx.translate(e.x,e.y);
-  var s=Math.sin(e.wobble)*0.07; ctx.scale(1+s,1-s);
-  ctx.globalAlpha=0.5; ctx.fillStyle='#1c3010';
-  ctx.beginPath(); ctx.ellipse(-e.r*.55,-e.r*.35,e.r*.8,e.r*.25,-0.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(e.r*.55,-e.r*.35,e.r*.8,e.r*.25,0.5,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1; ctx.fillStyle=e.flash>0?'#ff5533':'#1a2e0e';
-  ctx.beginPath(); ctx.ellipse(0,0,e.r*.6,e.r*.45,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#0a1505'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(0,e.r*.45); ctx.lineTo(0,e.r*1.15); ctx.stroke();
-  ctx.fillStyle='#ff1100';
-  ctx.beginPath(); ctx.arc(-e.r*.2,0,2,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(e.r*.2,0,2,0,Math.PI*2); ctx.fill();
-  ctx.restore();
+  if(e.type==='punk'){
+    // zombie punk — magenta, small, spiky mohawk
+    var s=Math.sin(e.wobble)*0.09; ctx.scale(1+s,1-s);
+    // wings
+    ctx.globalAlpha=0.45; ctx.fillStyle='#5c0a3a';
+    ctx.beginPath(); ctx.ellipse(-e.r*.5,-e.r*.3,e.r*.75,e.r*.22,-0.6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.r*.5,-e.r*.3,e.r*.75,e.r*.22,0.6,0,Math.PI*2); ctx.fill();
+    // body
+    ctx.globalAlpha=1; ctx.fillStyle=e.flash>0?'#ff88cc':'#8b0057';
+    ctx.beginPath(); ctx.ellipse(0,0,e.r*.58,e.r*.42,0,0,Math.PI*2); ctx.fill();
+    // mohawk spikes
+    ctx.fillStyle=e.flash>0?'#ffaadd':'#cc0077';
+    ctx.beginPath(); ctx.moveTo(-e.r*.25,-e.r*.42); ctx.lineTo(-e.r*.1,-e.r*1.05); ctx.lineTo(0,-e.r*.42); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-e.r*.05,-e.r*.42); ctx.lineTo(e.r*.08,-e.r*1.15); ctx.lineTo(e.r*.2,-e.r*.42); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(e.r*.18,-e.r*.42); ctx.lineTo(e.r*.28,-e.r*.95); ctx.lineTo(e.r*.38,-e.r*.42); ctx.fill();
+    // stinger
+    ctx.strokeStyle='#3d0026'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(0,e.r*.42); ctx.lineTo(0,e.r*1.05); ctx.stroke();
+    // eyes
+    ctx.fillStyle='#ff44cc';
+    ctx.beginPath(); ctx.arc(-e.r*.2,0,1.8,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r*.2,0,1.8,0,Math.PI*2); ctx.fill();
+  } else if(e.type==='ape'){
+    // zombie ape — brown, large, tanky, hp pips
+    var s=Math.sin(e.wobble)*0.05; ctx.scale(1+s,1-s);
+    // shadow
+    ctx.globalAlpha=0.4; ctx.fillStyle='#2a1a06';
+    ctx.beginPath(); ctx.ellipse(0,e.r*.1,e.r*.85,e.r*.65,0,0,Math.PI*2); ctx.fill();
+    // body
+    ctx.globalAlpha=1; ctx.fillStyle=e.flash>0?'#cc7722':'#5c3310';
+    ctx.beginPath(); ctx.ellipse(0,0,e.r*.72,e.r*.58,0,0,Math.PI*2); ctx.fill();
+    // chest
+    ctx.fillStyle=e.flash>0?'#ddaa55':'#7a4a1a';
+    ctx.beginPath(); ctx.ellipse(0,e.r*.12,e.r*.38,e.r*.3,0,0,Math.PI*2); ctx.fill();
+    // arms
+    ctx.fillStyle=e.flash>0?'#cc7722':'#5c3310';
+    ctx.beginPath(); ctx.ellipse(-e.r*.65,e.r*.1,e.r*.28,e.r*.18,0.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.r*.65,e.r*.1,e.r*.28,e.r*.18,-0.4,0,Math.PI*2); ctx.fill();
+    // stinger
+    ctx.strokeStyle='#2a1a06'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(0,e.r*.58); ctx.lineTo(0,e.r*1.2); ctx.stroke();
+    // eyes
+    ctx.fillStyle='#ff6600';
+    ctx.beginPath(); ctx.arc(-e.r*.25,-e.r*.05,2.8,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r*.25,-e.r*.05,2.8,0,Math.PI*2); ctx.fill();
+    // hp pips
+    var pipW=6,pipH=3,pipGap=3,totalW=(e.maxHp*(pipW+pipGap))-pipGap;
+    var px=-totalW/2, py=-e.r*.85;
+    for(var h=0;h<e.maxHp;h++){
+      ctx.fillStyle=h<e.hp?'#ff6600':'rgba(255,100,0,0.2)';
+      ctx.fillRect(px+h*(pipW+pipGap),py,pipW,pipH);
+    }
+  } else {
+    // mosquito (original)
+    var s=Math.sin(e.wobble)*0.07; ctx.scale(1+s,1-s);
+    ctx.globalAlpha=0.5; ctx.fillStyle='#1c3010';
+    ctx.beginPath(); ctx.ellipse(-e.r*.55,-e.r*.35,e.r*.8,e.r*.25,-0.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.r*.55,-e.r*.35,e.r*.8,e.r*.25,0.5,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.fillStyle=e.flash>0?'#ff5533':'#1a2e0e';
+    ctx.beginPath(); ctx.ellipse(0,0,e.r*.6,e.r*.45,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#0a1505'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(0,e.r*.45); ctx.lineTo(0,e.r*1.15); ctx.stroke();
+    ctx.fillStyle='#ff1100';
+    ctx.beginPath(); ctx.arc(-e.r*.2,0,2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r*.2,0,2,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1; ctx.restore();
 }
 
 function drawProjectile(p){
@@ -364,8 +437,7 @@ function drawHUD(){
   ctx.fillText('W'+wave,LANE_X+LANE_W-8,Math.round(GH*0.05));
   var remaining=WIN_SCORE-score;
   ctx.font=Math.round(GH*0.013)+'px "Space Mono"'; ctx.textAlign='center';
-  if(remaining>0){ ctx.fillStyle='rgba(74,222,128,0.3)'; ctx.fillText(remaining+' kills to GTD',GW/2,GH-Math.round(GH*0.055)); }
-  else{ ctx.fillStyle='rgba(74,222,128,0.45)'; ctx.fillText('grinding for rank',GW/2,GH-Math.round(GH*0.055)); }
+  ctx.fillStyle='rgba(74,222,128,0.35)'; ctx.fillText('grind for rank · '+score+' kills',GW/2,GH-Math.round(GH*0.055));
 }
 
 function gameLoop(ts){
@@ -378,16 +450,25 @@ function gameLoop(ts){
   if(keys[' ']){ if(!keys._sw) shoot(); keys._sw=true; } else keys._sw=false;
   if(touchHeld){ autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
-  var rate=Math.max(0.45,1.7-wave*0.11);
+  var rate=Math.max(0.42,1.7-wave*0.11);
   if(spawnTimer>=rate){
     spawnTimer=0;
     var n=Math.min(Math.floor(wave/4)+1,2);
     for(var i=0;i<n;i++){
-      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,r:10+Math.random()*5,spd:1.1+wave*0.11+Math.random()*0.45,wobble:Math.random()*Math.PI*2,hp:wave>=10?2:1,maxHp:wave>=10?2:1,flash:0,dead:false});
+      var type='mosquito';
+      var roll=Math.random();
+      if(wave>=6 && roll<0.18) type='ape';
+      else if(wave>=3 && roll<0.42) type='punk';
+      var cfg={
+        mosquito:{r:10+Math.random()*5,spd:1.4+wave*0.08+Math.random()*0.25,hp:wave>=10?2:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:2.2+wave*0.09+Math.random()*0.3,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:0.95+wave*0.045+Math.random()*0.15,hp:3,pts:3}
+      }[type];
+      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false});
     }
   }
   waveTimer+=dt; if(waveTimer>=20){ waveTimer=0; wave++; }
-  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; e.x+=Math.sin(e.wobble)*0.55; e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
+  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; if(e.type==='punk'){ e.zz+=0.18; e.x+=Math.sin(e.zz)*1.8; } else { e.x+=Math.sin(e.wobble)*0.55; } e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
   for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; m.y-=1.1; m.life-=dt*2; }
@@ -398,7 +479,7 @@ function gameLoop(ts){
       if(Math.hypot(p.x-e.x,p.y-e.y)<e.r+p.r){
         p.dead=true; e.hp--; e.flash=0.16;
         if(e.hp<=0){
-          e.dead=true; score++; sndExplode();
+          e.dead=true; score+=(e.pts||1); sndExplode();
           for(var k=0;k<8;k++){ var a=Math.random()*Math.PI*2,sp=2+Math.random()*4; particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:2+Math.random()*2.5,col:Math.random()>.5?'#4ade80':'#2a7a2a'}); }
           if(score>=WIN_SCORE&&!hasWon){ hasWon=true; winGame(); return; }
         }
@@ -557,6 +638,17 @@ async function claimSpot(){
   }
 }
 
+var lbTab='all';
+function setLbTab(tab){
+  lbTab=tab;
+  ['all','week','day'].forEach(function(t){
+    var btn=document.getElementById('lbTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(!btn) return;
+    if(t===tab){ btn.style.background='rgba(74,222,128,0.15)'; btn.style.borderColor='rgba(74,222,128,0.5)'; btn.style.color='#4ade80'; }
+    else{ btn.style.background='transparent'; btn.style.borderColor='rgba(74,222,128,0.2)'; btn.style.color='rgba(74,222,128,0.4)'; }
+  });
+  loadLbData();
+}
 var lbRefreshTimer=null;
 function showLeaderboard(){
   document.getElementById('lbScreen').style.display='flex';
@@ -566,7 +658,15 @@ function showLeaderboard(){
 }
 function loadLbData(){
   var list=document.getElementById('lbList');
-  sbGet('leaderboard','select=twitter,wallet,score&order=score.desc').then(function(d){
+  var qs='select=twitter,wallet,score&order=score.desc';
+  if(lbTab==='week'){
+    var d=new Date(); d.setDate(d.getDate()-7);
+    qs+='&created_at=gte.'+d.toISOString();
+  } else if(lbTab==='day'){
+    var d=new Date(); d.setHours(0,0,0,0);
+    qs+='&created_at=gte.'+d.toISOString();
+  }
+  sbGet('leaderboard',qs).then(function(d){
     if(!d||!d.length){ list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>'; return; }
     var medals=['[1]','[2]','[3]'],out='';
     for(var i=0;i<d.length;i++){
@@ -578,6 +678,28 @@ function loadLbData(){
   }).catch(function(){ list.innerHTML='<div style="font-size:.55rem;color:#cc2200;text-align:center;padding:20px;">failed to load</div>'; });
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function takeSnapshot(){
+  var status=document.getElementById('snapshotStatus');
+  var slist=document.getElementById('snapshotList');
+  status.textContent='pulling top 50...'; status.style.display='block'; slist.style.display='none';
+  try{
+    var d=await sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=50');
+    if(!d||!d.length){ status.textContent='leaderboard empty'; return; }
+    var snap_id='snap_'+Date.now();
+    var ok=0;
+    for(var i=0;i<d.length;i++){
+      try{ await sbPost('og_list',{wallet:d[i].wallet,twitter:d[i].twitter,score:d[i].score,snapshot_id:snap_id,rank:i+1},'return=minimal'); ok++; }catch(e){}
+    }
+    status.textContent='snapshot saved — '+ok+' wallets marked OG';
+    var out='<div style="font-size:.42rem;color:rgba(74,222,128,.4);letter-spacing:2px;margin-bottom:8px;">TOP 50 · '+new Date().toDateString()+'</div>';
+    for(var i=0;i<d.length;i++){
+      var p=d[i];
+      out+='<div style="font-size:.5rem;color:#e8dcc8;padding:4px 0;border-bottom:1px solid rgba(74,222,128,0.06);display:flex;justify-content:space-between;"><span>'+(i+1)+'. '+escHtml(p.twitter||'anon')+'</span><span style="color:#4ade80;">'+(p.score||0)+'</span></div>';
+    }
+    slist.innerHTML=out; slist.style.display='block';
+  }catch(e){ status.textContent='failed: '+e.message; }
+}
 
 async function saveAdminCap(){
   var v=parseInt(document.getElementById('adminCap').value)||500; GTD_CAP=v;
@@ -623,6 +745,29 @@ async function clearLeaderboard(){
   try{ await sbDelete('leaderboard','id=gt.0'); status.textContent='leaderboard wiped'; }catch(e){ status.textContent='failed'; }
 }
 
+async function runSnapshot(){
+  var status=document.getElementById('snapshotStatus');
+  var tweet=document.getElementById('snapshotTweet');
+  status.textContent='pulling top 50...'; status.style.display='block'; tweet.style.display='none';
+  try{
+    var d=await sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=50');
+    if(!d||!d.length){ status.textContent='no entries yet'; return; }
+    var snapId='snap_'+new Date().toISOString().slice(0,10).replace(/-/g,'');
+    var ok=0;
+    for(var i=0;i<d.length;i++){
+      try{
+        await sbPost('og_list',{wallet:d[i].wallet,twitter:d[i].twitter,score:d[i].score,snapshot_id:snapId,rank:i+1},'return=minimal');
+        ok++;
+      }catch(e){}
+    }
+    // build tweet copy
+    var lines=d.slice(0,50).map(function(p,i){ return (i+1)+'. '+(p.twitter||'anon')+' — '+p.score+' kills'; });
+    var tweetText='gobinos snapshot '+snapId+'\n\ntop goblins in the trenches\n\n'+lines.slice(0,10).join('\n')+'\n\n...and '+(d.length-10)+' more\n\ngobinos.wtf\n@gobinosoneth';
+    tweet.value=tweetText; tweet.style.display='block';
+    status.textContent='done! '+ok+'/'+d.length+' saved. snapshot: '+snapId;
+  }catch(e){ status.textContent='failed: '+e.message; }
+}
+
 async function clearPhase(){
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus'); status.textContent='clearing...'; status.style.display='block';
@@ -650,6 +795,7 @@ function checkWallet(){
       var val=parseInt(row.value);
       if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
       if(row.name==='GtdCap'&&val>0){ GTD_CAP=val; var el=document.getElementById('adminCap'); if(el) el.value=GTD_CAP; }
+      if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
     });
   }).catch(function(){});
 })();
@@ -663,7 +809,7 @@ return {
   resumeGame:resumeGame, toggleMute:toggleMute, adminTap:adminTap,
   checkAdminPass:checkAdminPass, saveAdminScore:saveAdminScore, saveAdminCap:saveAdminCap,
   exportWallets:exportWallets, importWallets:importWallets, clearLeaderboard:clearLeaderboard,
-  clearPhase:clearPhase, checkWallet:checkWallet
+  clearPhase:clearPhase, checkWallet:checkWallet, runSnapshot:runSnapshot, setLbTab:setLbTab, takeSnapshot:takeSnapshot
 };
 
 })();
