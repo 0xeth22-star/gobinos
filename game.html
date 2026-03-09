@@ -264,9 +264,7 @@ var autoShootTimer=0,gamePaused=false;
 // --- anti-bot ---
 var _lastRealInput=0, _lastMouseMove=0, _shootCount=0, _shootWindow=0, _botFlagged=false;
 var _devOpen=false;
-// devtools detection
-(function(){ var t=new Image(); Object.defineProperty(t,'id',{get:function(){ _devOpen=true; if(gameRunning){ gameRunning=false; _botFlagged=true; document.getElementById('deadSub').textContent='nice try'; document.getElementById('deadScreen').style.display='flex'; sndGameOver(); stopBgMusic(); } }}); void t.id; })();
-setInterval(function(){ var t=performance.now(); var check=function(){}; check.toString=function(){ _devOpen=true; return ''; }; if(_devOpen&&gameRunning){ gameRunning=false; _botFlagged=true; document.getElementById('deadSub').textContent='nice try'; document.getElementById('deadScreen').style.display='flex'; } },1000);
+
 
 function startAutoShoot(){ touchHeld=true; }
 function stopAutoShoot(){ touchHeld=false; }
