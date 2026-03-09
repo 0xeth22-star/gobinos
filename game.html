@@ -4,16 +4,87 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gobinos</title>
-<link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#050a03;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Creepster',cursive;color:#e8dcc8;}
-.title{font-size:clamp(3rem,14vw,7rem);color:#4ade80;letter-spacing:6px;text-shadow:0 0 40px rgba(74,222,128,0.35);}
-.sub{font-size:clamp(0.5rem,2vw,0.75rem);letter-spacing:5px;color:rgba(232,220,200,0.3);text-transform:uppercase;margin-top:16px;font-family:monospace;}
+body{
+  background:#050a03;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-family:'Space Mono',monospace;
+  color:#e8dcc8;
+  overflow:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 50% 100%, rgba(42,92,42,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+.goblin{
+  font-size:clamp(3rem,12vw,5rem);
+  animation:bob 3s ease-in-out infinite;
+  filter:drop-shadow(0 0 20px rgba(74,222,128,0.2));
+  margin-bottom:20px;
+}
+@keyframes bob{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-10px);}
+}
+.title{
+  font-family:'Creepster',cursive;
+  font-size:clamp(3rem,14vw,6rem);
+  color:#4ade80;
+  letter-spacing:6px;
+  text-shadow:0 0 40px rgba(74,222,128,0.3);
+  animation:flicker 5s infinite;
+}
+@keyframes flicker{
+  0%,94%,100%{opacity:1;}
+  95%{opacity:0.8;}
+  97%{opacity:1;}
+  99%{opacity:0.85;}
+}
+.line{
+  width:120px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(74,222,128,0.4),transparent);
+  margin:20px auto;
+}
+.msg{
+  font-size:clamp(0.55rem,2vw,0.7rem);
+  color:rgba(232,220,200,0.35);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  text-align:center;
+  line-height:2.2;
+}
+.msg span{color:rgba(74,222,128,0.6);}
+.x-link{
+  position:fixed;bottom:28px;
+  display:flex;align-items:center;gap:8px;
+  color:rgba(232,220,200,0.2);
+  text-decoration:none;font-size:0.5rem;
+  letter-spacing:3px;text-transform:uppercase;
+  transition:color .2s;
+}
+.x-link:hover{color:rgba(232,220,200,0.6);}
+.x-link svg{width:13px;height:13px;fill:currentColor;}
 </style>
 </head>
 <body>
+  <div class="goblin">🧌</div>
   <div class="title">GOBINOS</div>
-  <div class="sub">back soon</div>
+  <div class="line"></div>
+  <div class="msg">
+    trenches closed for now<br>
+    <span>we're coming back harder</span>
+  </div>
+  <a href="https://x.com/gobinosoneth" target="_blank" class="x-link">
+    <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.738l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+    @gobinosoneth
+  </a>
 </body>
 </html>
