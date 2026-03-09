@@ -432,7 +432,7 @@ canvas#bgCanvas{
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
-var checkerOn=false, gameOn=false;
+var checkerOn=true, gameOn=true;
 
 function sbH(){ return {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}; }
 async function hashStr(s){
@@ -445,15 +445,9 @@ async function init(){
   try{
     var r=await fetch(SB+'/config?select=name,value',{headers:sbH()});
     var d=await r.json();
-    if(d&&d.length){
-      d.forEach(function(row){
-        if(row.name==='Checker') checkerOn=row.value==='1';
-        if(row.name==='GameOn') gameOn=row.value==='1';
-      });
-    }
-    applyChecker();
-    applyGame();
   }catch(e){}
+  applyChecker();
+  applyGame();
 }
 
 function applyGame(){
