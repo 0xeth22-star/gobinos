@@ -73,9 +73,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
       <button class="o-btn" id="claimBtn" onclick="claimSpot()">claim GTD spot</button>
+      <button class="o-btn" id="keepGrindBtn" onclick="keepGrinding()" style="background:rgba(20,50,20,0.6);border-color:rgba(74,222,128,0.2);font-size:.85rem;letter-spacing:3px;">keep grinding</button>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button class="o-btn" onclick="shareScore('win')" style="background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.12);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.45);">post on 𝕏</button>
-        <button class="o-btn red" onclick="restartGame()" style="font-size:.68rem;padding:9px;letter-spacing:1px;">again</button>
+        <button class="o-btn red" onclick="restartGame()" style="font-size:.68rem;padding:9px;letter-spacing:1px;">restart</button>
         <button class="o-btn" onclick="goMenu()" style="background:transparent;border-color:rgba(107,143,62,0.15);font-size:.68rem;padding:9px;letter-spacing:1px;color:rgba(232,220,200,0.25);">menu</button>
       </div>
     </div>
@@ -435,7 +436,7 @@ resize();
 window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
 
 // ---- GAME STATE ----
-var score=0,wave=1,lives=3,gameRunning=false;
+var score=0,wave=1,lives=3,gameRunning=false,hasWon=false;
 var GOBLIN_X=GW/2;
 var enemies=[],projectiles=[],particles=[],missTexts=[];
 var spawnTimer=0,waveTimer=0,lastTime=0;
@@ -637,6 +638,10 @@ function drawHUD(){
     ctx.font=Math.round(GH*0.013)+'px "Space Mono"';
     ctx.textAlign='center'; ctx.fillStyle='rgba(74,222,128,0.3)';
     ctx.fillText(remaining+' kills to GTD',GW/2,GH-Math.round(GH*0.055));
+  } else {
+    ctx.font=Math.round(GH*0.013)+'px "Space Mono"';
+    ctx.textAlign='center'; ctx.fillStyle='rgba(74,222,128,0.45)';
+    ctx.fillText('grinding for rank',GW/2,GH-Math.round(GH*0.055));
   }
 }
 
@@ -713,7 +718,7 @@ function gameLoop(ts){
             var a=Math.random()*Math.PI*2,sp=2+Math.random()*4;
             particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:2+Math.random()*2.5,col:Math.random()>.5?'#4ade80':'#2a7a2a'});
           }
-          if(score>=WIN_SCORE){ winGame(); return; }
+          if(score>=WIN_SCORE && !hasWon){ hasWon=true; winGame(); return; }
         }
         break;
       }
@@ -851,7 +856,7 @@ function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block';
   document.getElementById('muteBtn').style.display='block';
-  score=0; wave=1; lives=3;
+  score=0; wave=1; lives=3; hasWon=false;
   GOBLIN_X=GW/2; gamePaused=false;
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
@@ -902,6 +907,7 @@ function gameOver(){
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver();
   stopBgMusic();
+  stopBgMusic();
   // upsert leaderboard — only update if new score beats existing
   sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score').then(function(d){
     if(d&&d.length){
@@ -914,7 +920,7 @@ function gameOver(){
 
 function winGame(){
   hasPlayed=true;
-  gameRunning=false; stopAutoShoot();
+  gameRunning=false; gamePaused=true; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
   var cb=document.getElementById('claimBtn');
@@ -923,7 +929,16 @@ function winGame(){
   document.getElementById('winErr').style.display='none';
   document.getElementById('winScreen').style.display='flex';
   sndWin();
-  stopBgMusic();
+}
+
+function keepGrinding(){
+  document.getElementById('winScreen').style.display='none';
+  document.getElementById('pauseBtn').style.display='block';
+  document.getElementById('muteBtn').style.display='block';
+  gamePaused=false; gameRunning=true;
+  startBgMusic();
+  lastTime=performance.now();
+  requestAnimationFrame(gameLoop);
 }
 
 async function claimSpot(){
@@ -938,7 +953,7 @@ async function claimSpot(){
       return;
     }
     await sbPost('allowlist',{twitter:playerHandle,wallet:playerWallet,score:score});
-    await sbPost('masterlist',{twitter:playerHandle,wallet:playerWallet});
+    await sbPost('masterlist',{twitter:playerHandle,wallet:playerWallet},'return=minimal');
     // upsert leaderboard best score
     var lb=await sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score');
     if(lb&&lb.length){ if(score>lb[0].score) await sbPatch('leaderboard','id=eq.'+lb[0].id,{score:score}); }
@@ -965,7 +980,7 @@ function showLeaderboard(){
 }
 function loadLbData(){
   var list=document.getElementById('lbList');
-  sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=10').then(function(d){
+  sbGet('leaderboard','select=twitter,wallet,score&order=score.desc').then(function(d){
     if(!d||!d.length){
       list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>';
       return;
