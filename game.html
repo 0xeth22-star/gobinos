@@ -585,7 +585,7 @@ function restartGame(){
 function gameOver(){
   hasPlayed=true; gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('deadSub').textContent=score+' kills. mosquitos won';
+  document.getElementById('deadSub').textContent=score+' kills. back to the trenches';
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver(); stopBgMusic();
   sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score').then(function(d){
