@@ -16,6 +16,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 
+/* ── FLASH FIX: body starts invisible, revealed after fonts load ── */
 body{
   background:var(--mud);
   min-height:100vh;
@@ -27,9 +28,10 @@ body{
   justify-content:center;
   overflow:hidden;
   position:relative;
+  opacity:0;
+  transition:opacity 0.18s;
 }
 
-/* ---- cave bg ---- */
 body::before{
   content:'';
   position:fixed;inset:0;
@@ -41,7 +43,6 @@ body::before{
   z-index:0;
 }
 
-/* cave walls on sides */
 body::after{
   content:'';
   position:fixed;inset:0;
@@ -52,7 +53,6 @@ body::after{
   z-index:0;
 }
 
-/* dripping slime lines */
 .drip{
   position:fixed;
   top:0;
@@ -70,7 +70,6 @@ canvas#bgCanvas{
   opacity:0.35;
 }
 
-/* ---- main content ---- */
 .site{
   position:relative;
   z-index:10;
@@ -83,7 +82,6 @@ canvas#bgCanvas{
   padding:0 24px;
 }
 
-/* goblin icon */
 .goblin-icon{
   font-size:clamp(3rem,10vw,5rem);
   line-height:1;
@@ -97,7 +95,6 @@ canvas#bgCanvas{
   50%{transform:translateY(-8px);}
 }
 
-/* title */
 .title{
   font-family:'Creepster',cursive;
   font-size:clamp(3.5rem,14vw,7rem);
@@ -118,7 +115,6 @@ canvas#bgCanvas{
   99%{opacity:1;}
 }
 
-/* tagline */
 .tagline{
   font-size:clamp(0.5rem,2vw,0.65rem);
   color:rgba(232,220,200,0.35);
@@ -127,7 +123,6 @@ canvas#bgCanvas{
   margin-bottom:48px;
 }
 
-/* enter button */
 .enter-btn{
   display:inline-block;
   padding:18px 32px;
@@ -164,7 +159,6 @@ canvas#bgCanvas{
 }
 .enter-btn:active{transform:translateY(0);}
 
-/* checker section */
 .checker-wrap{
   margin-top:32px;
   display:none;
@@ -221,7 +215,6 @@ canvas#bgCanvas{
   text-align:center;
 }
 
-/* X link bottom */
 .x-link{
   position:fixed;
   bottom:24px;
@@ -240,13 +233,8 @@ canvas#bgCanvas{
   padding:8px 16px;
 }
 .x-link:hover{color:rgba(232,220,200,0.7);}
-.x-link svg{
-  width:14px;height:14px;
-  fill:currentColor;
-  flex-shrink:0;
-}
+.x-link svg{width:14px;height:14px;fill:currentColor;flex-shrink:0;}
 
-/* ---- admin ---- */
 .admin-trigger{
   position:fixed;bottom:0;right:0;
   width:80px;height:80px;
@@ -274,56 +262,16 @@ canvas#bgCanvas{
   max-height:88vh;
   overflow-y:auto;
 }
-.admin-title{
-  font-family:'Creepster',cursive;
-  font-size:1.4rem;
-  color:var(--slime);
-  letter-spacing:3px;
-  margin-bottom:24px;
-}
+.admin-title{font-family:'Creepster',cursive;font-size:1.4rem;color:var(--slime);letter-spacing:3px;margin-bottom:24px;}
 .admin-field{margin-bottom:14px;}
-.admin-field label{
-  display:block;
-  font-size:.45rem;
-  letter-spacing:3px;
-  color:var(--slime);
-  text-transform:uppercase;
-  margin-bottom:6px;
-}
-.admin-field input,.admin-field textarea{
-  width:100%;
-  background:rgba(0,0,0,.5);
-  border:1px solid rgba(107,143,62,.2);
-  border-radius:4px;
-  padding:10px 12px;
-  color:var(--bone);
-  font-family:'Space Mono',monospace;
-  font-size:.72rem;
-  outline:none;
-  resize:none;
-}
+.admin-field label{display:block;font-size:.45rem;letter-spacing:3px;color:var(--slime);text-transform:uppercase;margin-bottom:6px;}
+.admin-field input,.admin-field textarea{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.2);border-radius:4px;padding:10px 12px;color:var(--bone);font-family:'Space Mono',monospace;font-size:.72rem;outline:none;resize:none;}
 .admin-field input:focus,.admin-field textarea:focus{border-color:rgba(74,222,128,.4);}
-.a-btn{
-  width:100%;padding:12px;
-  background:var(--green);
-  border:1px solid rgba(74,222,128,.3);
-  border-radius:4px;
-  color:var(--bone);
-  font-family:'Creepster',cursive;
-  font-size:1rem;letter-spacing:3px;
-  cursor:pointer;margin-top:6px;
-  text-transform:uppercase;
-}
+.a-btn{width:100%;padding:12px;background:var(--green);border:1px solid rgba(74,222,128,.3);border-radius:4px;color:var(--bone);font-family:'Creepster',cursive;font-size:1rem;letter-spacing:3px;cursor:pointer;margin-top:6px;text-transform:uppercase;}
 .a-btn.sm{font-size:.8rem;padding:10px;}
 .a-btn.ghost{background:rgba(0,0,0,.4);}
 .a-btn.danger{background:rgba(100,0,0,.4);border-color:rgba(204,34,0,.4);}
-.a-close{
-  position:absolute;top:16px;right:16px;
-  background:none;border:none;
-  color:rgba(232,220,200,.3);
-  cursor:pointer;font-size:1rem;
-  font-family:'Space Mono',monospace;
-}
+.a-close{position:absolute;top:16px;right:16px;background:none;border:none;color:rgba(232,220,200,.3);cursor:pointer;font-size:1rem;font-family:'Space Mono',monospace;}
 .s-div{border-top:1px solid rgba(107,143,62,.1);margin:14px 0;padding-top:12px;}
 .s-lbl{font-size:.44rem;letter-spacing:3px;color:rgba(107,143,62,.45);text-transform:uppercase;margin-bottom:8px;}
 .a-status{font-size:.52rem;margin-top:10px;letter-spacing:1px;color:var(--bright);display:none;}
@@ -334,16 +282,13 @@ canvas#bgCanvas{
 </head>
 <body>
 
-<!-- ambient bg canvas -->
 <canvas id="bgCanvas"></canvas>
 
-<!-- drip lines -->
 <div class="drip" style="left:15%;height:40%;top:0;opacity:0.6;"></div>
 <div class="drip" style="left:38%;height:25%;top:0;opacity:0.4;"></div>
 <div class="drip" style="left:62%;height:35%;top:0;opacity:0.5;"></div>
 <div class="drip" style="left:85%;height:20%;top:0;opacity:0.3;"></div>
 
-<!-- main -->
 <div class="site">
   <span class="goblin-icon">🧌</span>
   <div class="title" id="gobTitle">GOBINOS</div>
@@ -351,13 +296,11 @@ canvas#bgCanvas{
 
   <a href="/game" class="enter-btn" id="enterBtn" style="display:none">enter the trenches</a>
 
-  <!-- teaser state — shown when game not live -->
   <div id="teaserBlock" style="display:flex;flex-direction:column;align-items:center;gap:0;">
     <div style="font-size:0.42rem;color:rgba(107,143,62,0.45);letter-spacing:5px;text-transform:uppercase;margin-bottom:28px;">something is coming</div>
     <div style="font-size:0.52rem;color:rgba(74,222,128,0.3);letter-spacing:3px;text-transform:uppercase;margin-top:0;" id="teaserSub">trenches open tomorrow</div>
   </div>
 
-  <!-- checker (admin-toggled) -->
   <div class="checker-wrap" id="checkerWrap">
     <div class="checker-label">check your spot</div>
     <div class="checker-row">
@@ -368,7 +311,6 @@ canvas#bgCanvas{
   </div>
 </div>
 
-<!-- X link bottom -->
 <a href="https://x.com/gobinosoneth" target="_blank" class="x-link">
   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.738l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
@@ -376,10 +318,8 @@ canvas#bgCanvas{
   @gobinosoneth
 </a>
 
-<!-- admin trigger bottom right corner -->
 <div class="admin-trigger" id="adminTriggerEl" onclick="adminTap()"></div>
 
-<!-- admin overlay -->
 <div class="admin-overlay" id="adminOverlay">
   <div class="admin-card">
     <button class="a-close" onclick="closeAdmin()">×</button>
@@ -395,7 +335,6 @@ canvas#bgCanvas{
     </div>
 
     <div id="adminControls" style="display:none">
-
       <div class="s-lbl">toggles</div>
       <button class="a-btn sm" id="checkerToggleBtn" onclick="toggleChecker()">checker: off</button>
       <button class="a-btn sm" id="gameToggleBtn" onclick="toggleGame()" style="margin-top:4px;">game: hidden</button>
@@ -428,9 +367,9 @@ canvas#bgCanvas{
 </div>
 
 <script>
-// ---- CONFIG ----
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
+// ▼▼▼ swap with your publishable key ▼▼▼
+var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 var checkerOn=true, gameOn=true;
 
@@ -440,11 +379,16 @@ async function hashStr(s){
   return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
 }
 
-// ---- INIT ----
 async function init(){
   try{
     var r=await fetch(SB+'/config?select=name,value',{headers:sbH()});
     var d=await r.json();
+    if(d&&d.length){
+      d.forEach(function(row){
+        if(row.name==='GameOn') gameOn=row.value!=='0';
+        if(row.name==='Checker') checkerOn=row.value!=='0';
+      });
+    }
   }catch(e){}
   applyChecker();
   applyGame();
@@ -463,7 +407,6 @@ function applyChecker(){
   if(b) b.textContent='checker: '+(checkerOn?'on':'off');
 }
 
-// ---- CHECKER ----
 async function doCheck(){
   var w=document.getElementById('checkInput').value.trim();
   var res=document.getElementById('checkResult');
@@ -488,32 +431,22 @@ async function doCheck(){
   btn.disabled=false; btn.textContent='check';
 }
 
-// ---- ADMIN ----
 var tapC=0,tapT;
 document.addEventListener('DOMContentLoaded',function(){
   var el=document.getElementById('adminTriggerEl');
-  if(el) el.addEventListener('touchend',function(e){
-    e.preventDefault(); adminTap();
-  },{passive:false});
+  if(el) el.addEventListener('touchend',function(e){ e.preventDefault(); adminTap(); },{passive:false});
 });
 function adminTap(){
-  tapC++;
-  clearTimeout(tapT);
+  tapC++; clearTimeout(tapT);
   tapT=setTimeout(function(){tapC=0;},700);
   if(tapC>=3){tapC=0;openAdmin();}
 }
 var gC=0,gT;
 document.addEventListener('keydown',function(e){
-  if(e.key==='G'&&e.shiftKey){
-    gC++;clearTimeout(gT);
-    gT=setTimeout(function(){gC=0;},800);
-    if(gC>=2){gC=0;openAdmin();}
-  }
+  if(e.key==='G'&&e.shiftKey){ gC++;clearTimeout(gT); gT=setTimeout(function(){gC=0;},800); if(gC>=2){gC=0;openAdmin();} }
 });
 document.getElementById('gobTitle').addEventListener('click',function(){
-  tapC++;clearTimeout(tapT);
-  tapT=setTimeout(function(){tapC=0;},600);
-  if(tapC>=3){tapC=0;openAdmin();}
+  tapC++;clearTimeout(tapT); tapT=setTimeout(function(){tapC=0;},600); if(tapC>=3){tapC=0;openAdmin();}
 });
 
 function openAdmin(){document.getElementById('adminOverlay').classList.add('show');}
@@ -526,34 +459,16 @@ function closeAdmin(){
 }
 async function checkPass(){
   var h=await hashStr(document.getElementById('adminPass').value);
-  if(h===ADMIN_HASH){
-    document.getElementById('adminLogin').style.display='none';
-    document.getElementById('adminControls').style.display='block';
-    applyChecker();
-  }else{
-    document.getElementById('passErr').style.display='block';
-  }
+  if(h===ADMIN_HASH){ document.getElementById('adminLogin').style.display='none'; document.getElementById('adminControls').style.display='block'; applyChecker(); }
+  else{ document.getElementById('passErr').style.display='block'; }
 }
 
 async function sbPatchConfig(name,value){
-  return fetch(SB+'/config?name=eq.'+name,{
-    method:'PATCH',
-    headers:Object.assign(sbH(),{'Prefer':'return=minimal'}),
-    body:JSON.stringify({value:value})
-  });
+  return fetch(SB+'/config?name=eq.'+name,{method:'PATCH',headers:Object.assign(sbH(),{'Prefer':'return=minimal'}),body:JSON.stringify({value:value})});
 }
 
-function toggleGame(){
-  gameOn=!gameOn; applyGame();
-  sbPatchConfig('GameOn',gameOn?'1':'0');
-  showStatus('game '+(gameOn?'live':'hidden'),false);
-}
-
-function toggleChecker(){
-  checkerOn=!checkerOn; applyChecker();
-  sbPatchConfig('Checker',checkerOn?'1':'0');
-  showStatus('checker '+(checkerOn?'on':'off'),false);
-}
+function toggleGame(){ gameOn=!gameOn; applyGame(); sbPatchConfig('GameOn',gameOn?'1':'0'); showStatus('game '+(gameOn?'live':'hidden'),false); }
+function toggleChecker(){ checkerOn=!checkerOn; applyChecker(); sbPatchConfig('Checker',checkerOn?'1':'0'); showStatus('checker '+(checkerOn?'on':'off'),false); }
 
 async function exportWallets(type){
   var tbl=type==='masterlist'?'masterlist':'allowlist';
@@ -562,9 +477,7 @@ async function exportWallets(type){
     var r=await fetch(SB+'/'+tbl+'?select=wallet&limit=10000',{headers:sbH()});
     var d=await r.json();
     var lines=(d||[]).filter(function(r){return r.wallet;}).map(function(r){return r.wallet;});
-    var blob=new Blob([lines.join('\n')],{type:'text/plain'});
-    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download='gobinos-'+type+'.txt'; a.click();
+    var blob=new Blob([lines.join('\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gobinos-'+type+'.txt'; a.click();
     showStatus('exported '+lines.length,false);
   }catch(e){showStatus('failed',true);}
 }
@@ -592,10 +505,8 @@ async function importWallets(){
 async function clearPhase(){
   if(!confirm('delete all allowlist records? masterlist stays safe.')) return;
   showStatus('clearing...',false);
-  try{
-    await fetch(SB+'/allowlist?id=gt.0',{method:'DELETE',headers:sbH()});
-    showStatus('cleared',false);
-  }catch(e){showStatus('failed',true);}
+  try{ await fetch(SB+'/allowlist?score=gte.0',{method:'DELETE',headers:sbH()}); showStatus('cleared',false); }
+  catch(e){showStatus('failed',true);}
 }
 
 function showStatus(msg,isErr){
@@ -604,21 +515,15 @@ function showStatus(msg,isErr){
   el.className='a-status show'+(isErr?' err':'');
 }
 
-// ---- AMBIENT BG PARTICLES ----
+// ambient particles
 (function(){
   var c=document.getElementById('bgCanvas');
   var ctx=c.getContext('2d');
   var W,H,pts=[];
   function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
-  resize();
-  window.addEventListener('resize',resize);
+  resize(); window.addEventListener('resize',resize);
   for(var i=0;i<28;i++){
-    pts.push({
-      x:Math.random()*1000,y:Math.random()*1000,
-      vx:(Math.random()-.5)*0.18,vy:(Math.random()-.5)*0.18,
-      r:Math.random()*1.5+0.5,
-      a:Math.random()
-    });
+    pts.push({x:Math.random()*1000,y:Math.random()*1000,vx:(Math.random()-.5)*0.18,vy:(Math.random()-.5)*0.18,r:Math.random()*1.5+0.5,a:Math.random()});
   }
   function draw(){
     ctx.clearRect(0,0,W,H);
@@ -628,15 +533,18 @@ function showStatus(msg,isErr){
       if(p.y<0)p.y=H; if(p.y>H)p.y=0;
       p.a+=0.004;
       var alpha=0.12+Math.sin(p.a)*0.08;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle='rgba(74,222,128,'+alpha+')';
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(74,222,128,'+alpha+')'; ctx.fill();
     });
     requestAnimationFrame(draw);
   }
   draw();
 })();
+
+// ── FLASH FIX: reveal body only after fonts are ready
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){
+  document.body.style.opacity='1';
+});
 
 init();
 </script>
