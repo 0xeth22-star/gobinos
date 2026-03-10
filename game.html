@@ -172,9 +172,8 @@ var _gob = (function(){
 // ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-// ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
-var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 
@@ -201,7 +200,7 @@ function fnPost(endpoint,body){
   });
 }
 
-var WIN_SCORE=9999, GTD_CAP=350;
+var WIN_SCORE=100000000, GTD_CAP=350;
 var playerWallet='', playerHandle='';
 var _audioCtx=null, soundOn=true;
 
@@ -518,27 +517,27 @@ function gameLoop(ts){
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
-  if(touchHeld){ autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
+  if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
-  var rate=Math.max(0.55,2.0-wave*0.11);
+  var rate=Math.max(0.72,2.2-wave*0.09);
   if(spawnTimer>=rate){
     spawnTimer=0;
-    var n=Math.min(Math.floor(wave/5)+1,2);
+    var n=Math.min(Math.floor(wave/6)+1,2);
     for(var i=0;i<n;i++){
       var type='mosquito';
       var roll=Math.random();
-      if(wave>=8 && roll<0.15) type='ape';
-      else if(wave>=4 && roll<0.38) type='punk';
+      if(wave>=10 && roll<0.12) type='ape';
+      else if(wave>=5 && roll<0.30) type='punk';
       var cfg={
-        mosquito:{r:10+Math.random()*5,spd:1.0+wave*0.055+Math.random()*0.2,hp:wave>=14?2:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:1.5+wave*0.065+Math.random()*0.22,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.65+wave*0.03+Math.random()*0.12,hp:3,pts:3}
+        mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.038+Math.random()*0.15,hp:wave>=16?2:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:1.2+wave*0.042+Math.random()*0.18,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3}
       }[type];
       enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false});
     }
   }
   waveTimer+=dt; if(waveTimer>=28){ waveTimer=0; wave++; }
-  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; if(e.type==='punk'){ e.zz+=0.18; e.x+=Math.sin(e.zz)*1.8; } else { e.x+=Math.sin(e.wobble)*0.55; } e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
+  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; if(e.type==='punk'){ e.zz+=0.14; e.x+=Math.sin(e.zz)*1.2; } else { e.x+=Math.sin(e.wobble)*0.45; } e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
   for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; m.y-=1.1; m.life-=dt*2; }
@@ -873,8 +872,10 @@ function checkWallet(){
 
 drawBG();
 canvas.style.opacity='1';
-// fade in after everything is sized and drawn — kills the unstyled flash
-requestAnimationFrame(function(){ wrap.style.opacity='1'; });
+// wait for fonts to load before reveal — kills unstyled text flash
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){
+  wrap.style.opacity='1';
+});
 // ── init tab highlight so ALL TIME is visually active on first open
 (function(){
   var tabs={all:'lbTabAll',week:'lbTabWeek',day:'lbTabDay'};
