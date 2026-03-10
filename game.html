@@ -172,7 +172,6 @@ var _gob = (function(){
 // ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-
 var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
 
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
@@ -308,7 +307,7 @@ function resize(){
 resize();
 window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
 
-var score=0,wave=1,lives=5,gameRunning=false,hasWon=false;
+var score=0,wave=1,lives=7,gameRunning=false,hasWon=false;
 var GOBLIN_X=GW/2;
 var enemies=[],projectiles=[],particles=[],missTexts=[];
 var spawnTimer=0,waveTimer=0,lastTime=0;
@@ -544,7 +543,7 @@ function drawHUD(){
   ctx.fillStyle='rgba(74,222,128,0.12)'; ctx.fillRect(bx,by,bw,bh);
   ctx.fillStyle='rgba(74,222,128,0.55)'; ctx.fillRect(bx,by,bw*Math.min(score/WIN_SCORE,1),bh);
   ctx.font=Math.round(GH*0.028)+'px serif'; ctx.textAlign='left';
-  for(var i=0;i<5;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}',LANE_X+8+i*Math.round(GH*0.028),Math.round(GH*0.052));
+  for(var i=0;i<7;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}',LANE_X+8+i*Math.round(GH*0.026),Math.round(GH*0.052));
   ctx.font=Math.round(GH*0.016)+'px "Space Mono"'; ctx.textAlign='right'; ctx.fillStyle='rgba(107,143,62,0.7)';
   ctx.fillText('W'+wave,LANE_X+LANE_W-8,Math.round(GH*0.05));
   var remaining=WIN_SCORE-score;
@@ -562,34 +561,28 @@ function gameLoop(ts){
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
   if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.08,0.3-(wave-1)*0.01); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
-  var rate=Math.max(0.72,2.2-wave*0.09);
+  var rate=Math.max(1.0,2.8-wave*0.07);
   if(spawnTimer>=rate){
     spawnTimer=0;
-    var n=Math.min(Math.floor(wave/6)+1,2);
+    var n=Math.min(Math.floor(wave/8)+1,2);
     for(var i=0;i<n;i++){
       var type='mosquito';
       var roll=Math.random();
-      if(wave>=10 && roll<0.12) type='bomber';
-      else if(wave>=10 && roll<0.24) type='ape';
-      else if(wave>=5 && roll<0.30) type='punk';
+      if(wave>=12 && roll<0.18) type='ape';
+      else if(wave>=5 && roll<0.28) type='punk';
       var cfg={
-        mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.038+Math.random()*0.15,hp:wave>=16?2:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:1.2+wave*0.042+Math.random()*0.18,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3},
-        bomber:{r:14+Math.random()*4,spd:2.2+wave*0.08+Math.random()*0.5,hp:2,pts:4}
+        mosquito:{r:10+Math.random()*5,spd:0.7+wave*0.025+Math.random()*0.12,hp:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:0.9+wave*0.028+Math.random()*0.14,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:0.45+wave*0.018+Math.random()*0.1,hp:3,pts:3}
       }[type];
-      // speed burst disabled — keeps game chill
       var burstChance=0;
-      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:burstChance>0&&Math.random()<burstChance?GH*(0.25+Math.random()*0.25):null});
+      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:null});
     }
   }
-  waveTimer+=dt; if(waveTimer>=28){ waveTimer=0; wave++; }
+  waveTimer+=dt; if(waveTimer>=35){ waveTimer=0; wave++; }
   for(var i=0;i<enemies.length;i++){ var e=enemies[i]; 
-    // speed burst — activates mid-screen, 2.5x speed for 0.6s
-    if(e.burstAt && !e.burst && e.y>=e.burstAt){ e.burst=true; e.burstTimer=0.6; e.spd=e.baseSpd*2.5; }
-    if(e.burst){ e.burstTimer-=dt; if(e.burstTimer<=0){ e.burst=false; e.spd=e.baseSpd; } }
     e.y+=e.spd; e.wobble+=0.11; 
-    if(e.type==='punk'){ e.zz+=0.14; e.x+=Math.sin(e.zz)*1.2; } else { e.x+=Math.sin(e.wobble)*0.45; } 
+    if(e.type==='punk'){ e.zz+=0.10; e.x+=Math.sin(e.zz)*0.9; } else { e.x+=Math.sin(e.wobble)*0.35; } 
     e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
@@ -611,20 +604,7 @@ function gameLoop(ts){
   }
   var gr=Math.round(GH*0.04);
   for(var i=0;i<enemies.length;i++){ var e=enemies[i]; if(e.dead) continue; if(e.y>GOBLIN_Y-gr){
-    if(e.type==='bomber'){
-      // bomber explodes — no life cost, but spawns 2 fast mosquitoes
-      e.dead=true;
-      sndExplode(); sndExplode();
-      for(var k=0;k<16;k++){ var a=Math.random()*Math.PI*2,sp=3+Math.random()*6; particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:3+Math.random()*4,col:Math.random()>.5?'#ff4400':'#ffaa00'}); }
-      // spawn 2 mosquitoes at bomber's x position, already mid-screen
-      for(var s=0;s<2;s++){
-        var spawnX=clampGoblin(e.x+(s===0?-30:30));
-        var mspd=1.4+wave*0.04;
-        enemies.push({x:spawnX,y:e.y-GH*0.18,type:'mosquito',r:11,spd:mspd,baseSpd:mspd,wobble:Math.random()*Math.PI*2,zz:0,hp:1,maxHp:1,pts:1,flash:0,dead:false,burst:false,burstAt:null});
-      }
-    } else {
       e.dead=true; lives--; hitFlash=0.4; sndHit(); missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1}); if(lives<=0){ gameOver(); return; }
-    }
   }}
   enemies=enemies.filter(function(e){return !e.dead;});
   projectiles=projectiles.filter(function(p){return !p.dead;});
@@ -714,7 +694,7 @@ function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block';
   document.getElementById('muteBtn').style.display='block';
-  score=0; wave=1; lives=5; hasWon=false; GOBLIN_X=GW/2; gamePaused=false;
+  score=0; wave=1; lives=7; hasWon=false; GOBLIN_X=GW/2; gamePaused=false;
   _botFlagged=false; _shootCount=0; _shotTimestamps=[]; // ── PATCH 12: reset variance tracker
   _lastRealInput=Date.now(); _lastMouseMove=Date.now();
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
