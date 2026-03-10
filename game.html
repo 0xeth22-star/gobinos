@@ -172,9 +172,9 @@ var _gob = (function(){
 // ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-// ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
-var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
+
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 
@@ -383,7 +383,7 @@ function shoot(isAuto){
   if(!isAuto && !_recordShot(now)) return;
   _lastShot=now;
   sndShoot();
-  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(11+wave*0.18),r:5,dead:false,trail:[]});
+  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(13+wave*0.35),r:5,dead:false,trail:[]});
 }
 
 function drawBG(){
@@ -556,11 +556,11 @@ function gameLoop(ts){
   if(!gameRunning) return;
   var dt=Math.min((ts-lastTime)/1000,0.05); lastTime=ts;
   goblinAnim+=dt*3; if(hitFlash>0) hitFlash-=dt;
-  var spd=GW*0.55*dt;
+  var spd=GW*(0.55+wave*0.018)*dt;
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
-  if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
+  if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.012,0.28-(wave-1)*0.026); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
   var rate=Math.max(0.72,2.2-wave*0.09);
   if(spawnTimer>=rate){
@@ -573,10 +573,10 @@ function gameLoop(ts){
       else if(wave>=6 && roll<0.10) type='bomber';
       else if(wave>=5 && roll<0.30) type='punk';
       var cfg={
-        mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.038+Math.random()*0.15,hp:wave>=16?2:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:1.2+wave*0.042+Math.random()*0.18,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3},
-        bomber:{r:14+Math.random()*4,spd:0.7+wave*0.025+Math.random()*0.1,hp:2,pts:4}
+        mosquito:{r:10+Math.random()*5,spd:1.4+wave*0.22+Math.random()*0.3,hp:wave>=16?2:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:1.9+wave*0.26+Math.random()*0.35,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:1.0+wave*0.15+Math.random()*0.2,hp:3,pts:3},
+        bomber:{r:14+Math.random()*4,spd:5.5+wave*0.45+Math.random()*1.5,hp:2,pts:4}
       }[type];
       // speed burst: ~20% of mosquitoes and punks get a burst trigger
       var burstChance=(type==='mosquito'||type==='punk') ? 0.2 : 0;
