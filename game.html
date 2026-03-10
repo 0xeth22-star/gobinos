@@ -173,8 +173,8 @@ var _gob = (function(){
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 // ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
-var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
-
+var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 
@@ -373,11 +373,11 @@ function shoot(isAuto){
   // require real user input within last 800ms
   if(now-_lastRealInput>800){ return; }
   // hard rate limit: min 120ms between shots
-  if(now-_lastShot<120){ return; }
+  if(now-_lastShot<60){ return; }
   // rapid fire detection: >8 shots in 1 second = bot
   if(now-_shootWindow>1000){ _shootWindow=now; _shootCount=0; }
   _shootCount++;
-  if(_shootCount>8){ _botFlagged=true; _killWithMessage('nice try'); return; }
+  if(_shootCount>20){ _botFlagged=true; _killWithMessage('nice try'); return; }
   // ── PATCH 10: timing variance check — ONLY for manual shots, not auto-shoot
   // Auto-shoot fires at fixed intervals by design; checking it would flag real players
   if(!isAuto && !_recordShot(now)) return;
@@ -562,24 +562,24 @@ function gameLoop(ts){
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
   if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.08,0.3-(wave-1)*0.01); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
-  var rate=Math.max(0.9,2.5-wave*0.06);
+  var rate=Math.max(0.72,2.2-wave*0.09);
   if(spawnTimer>=rate){
     spawnTimer=0;
-    var n=Math.min(Math.floor(wave/8)+1,2);
+    var n=Math.min(Math.floor(wave/6)+1,2);
     for(var i=0;i<n;i++){
       var type='mosquito';
       var roll=Math.random();
-      if(wave>=12 && roll<0.08) type='bomber';
-      else if(wave>=10 && roll<0.18) type='ape';
-      else if(wave>=5 && roll<0.28) type='punk';
+      if(wave>=10 && roll<0.12) type='bomber';
+      else if(wave>=10 && roll<0.24) type='ape';
+      else if(wave>=5 && roll<0.30) type='punk';
       var cfg={
-        mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.04+Math.random()*0.15,hp:wave>=20?2:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:1.1+wave*0.045+Math.random()*0.18,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.6+wave*0.03+Math.random()*0.1,hp:3,pts:3},
+        mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.038+Math.random()*0.15,hp:wave>=16?2:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:1.2+wave*0.042+Math.random()*0.18,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3},
         bomber:{r:14+Math.random()*4,spd:2.2+wave*0.08+Math.random()*0.5,hp:2,pts:4}
       }[type];
-      // speed burst: ~20% of mosquitoes and punks get a burst trigger
-      var burstChance=(type==='mosquito'||type==='punk') ? 0.2 : 0;
+      // speed burst disabled — keeps game chill
+      var burstChance=0;
       enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:burstChance>0&&Math.random()<burstChance?GH*(0.25+Math.random()*0.25):null});
     }
   }
