@@ -172,8 +172,9 @@ var _gob = (function(){
 // ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-
-var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
+// ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
+var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 
@@ -470,6 +471,34 @@ function drawEnemy(e){
       ctx.fillStyle=h<e.hp?'#ff6600':'rgba(255,100,0,0.2)';
       ctx.fillRect(px+h*(pipW+pipGap),py,pipW,pipH);
     }
+  } else if(e.type==='bomber'){
+    // bomber — bloated orange skull, pulses, warning ring when close
+    var pulse=0.9+Math.sin(e.wobble*3)*0.12;
+    ctx.scale(pulse,pulse);
+    // warning ring if in lower half
+    if(e.y>GH*0.5){
+      var danger=Math.min(1,(e.y-GH*0.5)/(GH*0.4));
+      ctx.globalAlpha=danger*0.35;
+      ctx.strokeStyle='#ff4400'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,e.r*1.8,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    // body
+    ctx.fillStyle=e.flash>0?'#ffaa00':'#cc4400';
+    ctx.beginPath(); ctx.ellipse(0,0,e.r*.75,e.r*.65,0,0,Math.PI*2); ctx.fill();
+    // skull face
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.beginPath(); ctx.arc(-e.r*.22,-e.r*.05,e.r*.22,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r*.22,-e.r*.05,e.r*.22,0,Math.PI*2); ctx.fill();
+    // fuse
+    ctx.strokeStyle='#ffcc00'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,-e.r*.65); ctx.bezierCurveTo(e.r*.3,-e.r*1.1,e.r*.1,-e.r*1.4,e.r*.2,-e.r*1.6); ctx.stroke();
+    // fuse spark
+    ctx.fillStyle='#ffffff'; ctx.shadowColor='#ffcc00'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(e.r*.2,-e.r*1.6,2.5,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+    // stinger
+    ctx.strokeStyle='#882200'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,e.r*.65); ctx.lineTo(0,e.r*1.2); ctx.stroke();
   } else {
     // mosquito (original)
     var s=Math.sin(e.wobble)*0.07; ctx.scale(1+s,1-s);
@@ -491,6 +520,20 @@ function drawProjectile(p){
   for(var i=0;i<p.trail.length;i++){ ctx.globalAlpha=(i/p.trail.length)*0.45; ctx.fillStyle='#4ade80'; ctx.beginPath(); ctx.arc(p.trail[i].x,p.trail[i].y,p.r*(i/p.trail.length),0,Math.PI*2); ctx.fill(); }
   ctx.globalAlpha=1; ctx.shadowColor='#4ade80'; ctx.shadowBlur=10; ctx.fillStyle='#ffffff';
   ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+}
+
+function drawBurstTrail(e){
+  if(!e.burst) return;
+  ctx.save();
+  ctx.globalAlpha=0.55;
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth=e.r*0.5;
+  ctx.beginPath();
+  ctx.moveTo(e.x, e.y);
+  ctx.lineTo(e.x, e.y-e.r*2.5);
+  ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.restore();
 }
 
 function drawHUD(){
@@ -527,17 +570,27 @@ function gameLoop(ts){
       var type='mosquito';
       var roll=Math.random();
       if(wave>=10 && roll<0.12) type='ape';
+      else if(wave>=6 && roll<0.10) type='bomber';
       else if(wave>=5 && roll<0.30) type='punk';
       var cfg={
         mosquito:{r:10+Math.random()*5,spd:0.85+wave*0.038+Math.random()*0.15,hp:wave>=16?2:1,pts:1},
         punk:{r:7+Math.random()*3,spd:1.2+wave*0.042+Math.random()*0.18,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3}
+        ape:{r:17+Math.random()*4,spd:0.55+wave*0.022+Math.random()*0.1,hp:3,pts:3},
+        bomber:{r:14+Math.random()*4,spd:0.7+wave*0.025+Math.random()*0.1,hp:2,pts:4}
       }[type];
-      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false});
+      // speed burst: ~20% of mosquitoes and punks get a burst trigger
+      var burstChance=(type==='mosquito'||type==='punk') ? 0.2 : 0;
+      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:burstChance>0&&Math.random()<burstChance?GH*(0.25+Math.random()*0.25):null});
     }
   }
   waveTimer+=dt; if(waveTimer>=28){ waveTimer=0; wave++; }
-  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; if(e.type==='punk'){ e.zz+=0.14; e.x+=Math.sin(e.zz)*1.2; } else { e.x+=Math.sin(e.wobble)*0.45; } e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
+  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; 
+    // speed burst — activates mid-screen, 2.5x speed for 0.6s
+    if(e.burstAt && !e.burst && e.y>=e.burstAt){ e.burst=true; e.burstTimer=0.6; e.spd=e.baseSpd*2.5; }
+    if(e.burst){ e.burstTimer-=dt; if(e.burstTimer<=0){ e.burst=false; e.spd=e.baseSpd; } }
+    e.y+=e.spd; e.wobble+=0.11; 
+    if(e.type==='punk'){ e.zz+=0.14; e.x+=Math.sin(e.zz)*1.2; } else { e.x+=Math.sin(e.wobble)*0.45; } 
+    e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
   for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; m.y-=1.1; m.life-=dt*2; }
@@ -557,12 +610,28 @@ function gameLoop(ts){
     }
   }
   var gr=Math.round(GH*0.04);
-  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; if(e.dead) continue; if(e.y>GOBLIN_Y-gr){ e.dead=true; lives--; hitFlash=0.4; sndHit(); missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1}); if(lives<=0){ gameOver(); return; } } }
+  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; if(e.dead) continue; if(e.y>GOBLIN_Y-gr){
+    if(e.type==='bomber'){
+      // bomber explodes — no life cost, but spawns 2 fast mosquitoes
+      e.dead=true;
+      sndExplode(); sndExplode();
+      for(var k=0;k<16;k++){ var a=Math.random()*Math.PI*2,sp=3+Math.random()*6; particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:3+Math.random()*4,col:Math.random()>.5?'#ff4400':'#ffaa00'}); }
+      // spawn 2 mosquitoes at bomber's x position, already mid-screen
+      for(var s=0;s<2;s++){
+        var spawnX=clampGoblin(e.x+(s===0?-30:30));
+        var mspd=1.4+wave*0.04;
+        enemies.push({x:spawnX,y:e.y-GH*0.18,type:'mosquito',r:11,spd:mspd,baseSpd:mspd,wobble:Math.random()*Math.PI*2,zz:0,hp:1,maxHp:1,pts:1,flash:0,dead:false,burst:false,burstAt:null});
+      }
+    } else {
+      e.dead=true; lives--; hitFlash=0.4; sndHit(); missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1}); if(lives<=0){ gameOver(); return; }
+    }
+  }}
   enemies=enemies.filter(function(e){return !e.dead;});
   projectiles=projectiles.filter(function(p){return !p.dead;});
   particles=particles.filter(function(p){return p.life>0;});
   missTexts=missTexts.filter(function(m){return m.life>0;});
   drawBG();
+  for(var i=0;i<enemies.length;i++) drawBurstTrail(enemies[i]);
   for(var i=0;i<enemies.length;i++) drawEnemy(enemies[i]);
   for(var i=0;i<projectiles.length;i++) drawProjectile(projectiles[i]);
   for(var i=0;i<particles.length;i++){ var p=particles[i]; ctx.globalAlpha=p.life; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fill(); }
