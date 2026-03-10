@@ -380,18 +380,29 @@ async function hashStr(s){
 }
 
 async function init(){
-  try{
-    var r=await fetch(SB+'/config?select=name,value',{headers:sbH()});
-    var d=await r.json();
-    if(d&&d.length){
-      d.forEach(function(row){
-        if(row.name==='GameOn') gameOn=row.value!=='0';
-        if(row.name==='Checker') checkerOn=row.value!=='0';
-      });
-    }
-  }catch(e){}
+  var configReady = new Promise(async function(resolve){
+    try{
+      var r=await fetch(SB+'/config?select=name,value',{headers:sbH()});
+      var d=await r.json();
+      if(d&&d.length){
+        d.forEach(function(row){
+          if(row.name==='GameOn') gameOn=row.value!=='0';
+          if(row.name==='Checker') checkerOn=row.value!=='0';
+        });
+      }
+    }catch(e){}
+    resolve();
+  });
+
+  // wait max 1.2s for config — then reveal anyway so slow connections don't hang
+  await Promise.race([configReady, new Promise(function(r){setTimeout(r,1200);})]);
   applyChecker();
   applyGame();
+
+  // reveal body now that state is correct — no flash
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){
+    document.body.style.opacity='1';
+  });
 }
 
 function applyGame(){
@@ -540,11 +551,6 @@ function showStatus(msg,isErr){
   }
   draw();
 })();
-
-// ── FLASH FIX: reveal body only after fonts are ready
-(document.fonts ? document.fonts.ready : Promise.resolve()).then(function(){
-  document.body.style.opacity='1';
-});
 
 init();
 </script>
