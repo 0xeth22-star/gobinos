@@ -173,7 +173,8 @@ var _gob = (function(){
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 // ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
-var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
+var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 
@@ -871,6 +872,24 @@ function checkWallet(){
 })();
 
 drawBG();
+
+// ── init tab highlight so ALL TIME is visually active on first open
+(function(){
+  var tabs={all:'lbTabAll',week:'lbTabWeek',day:'lbTabDay'};
+  for(var k in tabs){
+    var btn=document.getElementById(tabs[k]);
+    if(!btn) continue;
+    if(k==='all'){
+      btn.style.background='rgba(74,222,128,0.15)';
+      btn.style.borderColor='rgba(74,222,128,0.5)';
+      btn.style.color='#4ade80';
+    } else {
+      btn.style.background='transparent';
+      btn.style.borderColor='rgba(74,222,128,0.2)';
+      btn.style.color='rgba(74,222,128,0.4)';
+    }
+  }
+})();
 
 return {
   validateAndStart:validateAndStart, resetToNewGoblin:resetToNewGoblin,
