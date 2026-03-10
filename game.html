@@ -153,7 +153,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
         <div class="admin-label">OG SNAPSHOT</div>
         <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">pulls top 50 from leaderboard → writes to og_list</div>
         <button class="o-btn" onclick="_gob.takeSnapshot()" style="font-size:.7rem;padding:9px;margin-top:4px;background:rgba(20,60,20,0.8);border-color:rgba(74,222,128,0.4);">take snapshot</button>
-        <div id="snapshotStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
+        <div id="ogSnapshotStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
         <div id="snapshotList" style="margin-top:10px;max-height:160px;overflow-y:auto;display:none;"></div>
       </div>
       <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'" style="font-size:.75rem;padding:10px;margin-top:12px;background:transparent;">close</button>
@@ -169,15 +169,36 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 // all game logic wrapped — no global access for bots
 var _gob = (function(){
 
+// ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
+// All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
+// ▼▼▼ SWAP THIS when you rotate your anon key in Supabase → Settings → API ▼▼▼
+var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
+var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
+
+// ── PATCH 2: session token — issued server-side at game start
+var _sessionToken='', _sessionStartMs=0;
 
 function sbH(extra){ return Object.assign({'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},extra||{}); }
 function sbGet(t,qs){ return fetch(SB+'/'+t+(qs?'?'+qs:''),{headers:sbH()}).then(function(r){return r.json();}); }
 function sbPost(t,body,prefer){ return fetch(SB+'/'+t,{method:'POST',headers:sbH({'Prefer':prefer||'return=representation'}),body:JSON.stringify(body)}).then(function(r){return r.json();}); }
 function sbPatch(t,qs,body){ return fetch(SB+'/'+t+'?'+qs,{method:'PATCH',headers:sbH({'Prefer':'return=representation'}),body:JSON.stringify(body)}).then(function(r){return r.json();}); }
 function sbDelete(t,qs){ return fetch(SB+'/'+t+'?'+qs,{method:'DELETE',headers:sbH()}); }
+
+// ── PATCH 3: Edge Function helper — score/claim calls go here, never direct to Supabase
+function fnPost(endpoint,body){
+  var headers={'Content-Type':'application/json'};
+  if(_sessionToken) headers['x-session-token']=_sessionToken;
+  return fetch(FN_BASE+'/'+endpoint,{
+    method:'POST',
+    headers:headers,
+    body:JSON.stringify(body)
+  }).then(function(r){
+    if(!r.ok) return r.json().then(function(e){throw new Error(e.error||r.statusText);});
+    return r.json();
+  });
+}
 
 var WIN_SCORE=9999, GTD_CAP=350;
 var playerWallet='', playerHandle='';
@@ -235,7 +256,8 @@ function startBgMusic(){
 }
 function stopBgMusic(){
   if(!bgMusicStarted) return;
-  try{bgMusicNode.forEach(function(n){try{n.stop();}catch(e){}});bgMusicStarted=false;}catch(e){}
+  // ── PATCH 4: null bgMusicNode so startBgMusic can reinitialise cleanly
+  try{bgMusicNode.forEach(function(n){try{n.stop();}catch(e){}});bgMusicStarted=false;bgMusicNode=null;}catch(e){}
 }
 function setBgMusicVol(on){ if(bgMusicGain) bgMusicGain.gain.value=on?0.07:0; }
 
@@ -244,14 +266,27 @@ function shareScore(type){
   window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
 }
 
+// ── PATCH 5: checkCapAndClaim now goes through Edge Function (server-side cap check)
 async function checkCapAndClaim(){
   var btn=document.getElementById('claimBtn');
   btn.disabled=true; btn.textContent='checking spots...';
   try{
-    var d=await sbGet('allowlist','select=id');
-    if(d&&d.length>=GTD_CAP){ btn.textContent='spots gone ser'; btn.style.background='rgba(80,0,0,0.5)'; return; }
-    claimSpot();
-  }catch(e){ btn.disabled=false; btn.textContent='claim GTD spot'; claimSpot(); }
+    var result=await fnPost('submit-score',{
+      wallet:playerWallet,twitter:playerHandle,score:score,action:'claim'
+    });
+    if(result.already||result.claimed){
+      btn.textContent='ur GTD goblin \u{1F9CC}';
+      btn.style.background='rgba(42,92,42,0.8)';
+      btn.style.borderColor='rgba(74,222,128,0.5)';
+      btn.style.color='#4ade80';
+      if(result.already) document.getElementById('winInfo').textContent='spot already locked in ser';
+    }
+  }catch(e){
+    var msg=e.message||'';
+    if(msg==='spots full'){ btn.textContent='spots gone ser'; btn.style.background='rgba(80,0,0,0.5)'; }
+    else if(msg==='score too low'){ btn.textContent='keep grinding ser'; btn.disabled=false; }
+    else { btn.disabled=false; btn.textContent='broke. try again'; }
+  }
 }
 
 var canvas=document.getElementById('gameCanvas');
@@ -266,11 +301,13 @@ function resize(){
   wrap.style.width=GW+'px'; wrap.style.height=GH+'px';
   LANE_W=Math.round(GW*0.54); LANE_X=(GW-LANE_W)/2;
   GOBLIN_Y=GH-Math.round(GH*0.12);
+  // ── PATCH 6: clamp goblin after resize so it doesn't end up off-lane
+  if(gameRunning) GOBLIN_X=clampGoblin(GOBLIN_X);
 }
 resize();
 window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
 
-var score=0,wave=1,lives=3,gameRunning=false,hasWon=false;
+var score=0,wave=1,lives=5,gameRunning=false,hasWon=false;
 var GOBLIN_X=GW/2;
 var enemies=[],projectiles=[],particles=[],missTexts=[];
 var spawnTimer=0,waveTimer=0,lastTime=0;
@@ -282,7 +319,33 @@ var autoShootTimer=0,gamePaused=false;
 // --- anti-bot ---
 var _lastRealInput=0, _lastMouseMove=0, _shootCount=0, _shootWindow=0, _botFlagged=false;
 var _devOpen=false;
+// ── PATCH 7: shot timing variance — bots fire at machine-regular intervals, humans don't
+var _shotTimestamps=[];
 
+// ── PATCH 8: centralised kill message (used by bot detection paths)
+function _killWithMessage(msg){
+  gameRunning=false; stopAutoShoot();
+  document.getElementById('pauseBtn').style.display='none';
+  document.getElementById('deadSub').textContent=msg;
+  document.getElementById('deadScreen').style.display='flex';
+  sndGameOver(); stopBgMusic();
+}
+
+// ── PATCH 9: timing variance check — returns false and kills session if bot-like
+function _recordShot(ts){
+  _shotTimestamps.push(ts);
+  if(_shotTimestamps.length>12) _shotTimestamps.shift();
+  if(_shotTimestamps.length>=8){
+    var gaps=[];
+    for(var i=1;i<_shotTimestamps.length;i++) gaps.push(_shotTimestamps[i]-_shotTimestamps[i-1]);
+    var mean=gaps.reduce(function(a,b){return a+b;},0)/gaps.length;
+    var variance=gaps.reduce(function(a,b){return a+Math.pow(b-mean,2);},0)/gaps.length;
+    var cv=mean>0?Math.sqrt(variance)/mean:0;
+    // Humans: CV > 0.25. Bots (scripted auto-fire): CV near 0
+    if(cv<0.05){ _botFlagged=true; _killWithMessage('nice try'); return false; }
+  }
+  return true;
+}
 
 function startAutoShoot(){ touchHeld=true; }
 function stopAutoShoot(){ touchHeld=false; }
@@ -296,14 +359,14 @@ document.addEventListener('keyup',function(e){ keys[e.key]=false; });
 
 canvas.addEventListener('touchstart',function(e){ _lastRealInput=Date.now(); _lastMouseMove=Date.now(); e.preventDefault(); var tx=scaleX(e.touches[0].clientX); touchStartX=tx; touchStartTime=Date.now(); touchHeld=true; if(gameRunning){ GOBLIN_X=clampGoblin(tx); startAutoShoot(); } },{passive:false});
 canvas.addEventListener('touchmove',function(e){ e.preventDefault(); if(!gameRunning) return; GOBLIN_X=clampGoblin(scaleX(e.touches[0].clientX)); },{passive:false});
-canvas.addEventListener('touchend',function(e){ e.preventDefault(); touchHeld=false; stopAutoShoot(); if(!gameRunning) return; var tx=scaleX(e.changedTouches[0].clientX); var moved=Math.abs(tx-touchStartX); if(Date.now()-touchStartTime<300&&moved<25) shoot(); },{passive:false});
-canvas.addEventListener('click',function(e){ if(!gameRunning) return; shoot(); });
+canvas.addEventListener('touchend',function(e){ e.preventDefault(); touchHeld=false; stopAutoShoot(); if(!gameRunning) return; var tx=scaleX(e.changedTouches[0].clientX); var moved=Math.abs(tx-touchStartX); if(Date.now()-touchStartTime<300&&moved<25) shoot(false); },{passive:false});
+canvas.addEventListener('click',function(e){ if(!gameRunning) return; shoot(false); });
 canvas.addEventListener('mousedown',function(e){ _lastRealInput=Date.now(); if(!gameRunning) return; startAutoShoot(); });
 document.addEventListener('mouseup',function(){ stopAutoShoot(); });
 canvas.addEventListener('mousemove',function(e){ _lastRealInput=Date.now(); _lastMouseMove=Date.now(); if(!gameRunning) return; var mx=scaleX(e.clientX); if(mx>LANE_X&&mx<LANE_X+LANE_W) GOBLIN_X=mx; });
 
-var _lastShot=0;
-function shoot(){
+var _lastShot=0, _isAutoShot=false;
+function shoot(isAuto){
   if(!gameRunning||_botFlagged) return;
   var now=Date.now();
   // require real user input within last 800ms
@@ -313,7 +376,10 @@ function shoot(){
   // rapid fire detection: >8 shots in 1 second = bot
   if(now-_shootWindow>1000){ _shootWindow=now; _shootCount=0; }
   _shootCount++;
-  if(_shootCount>8){ _botFlagged=true; gameRunning=false; document.getElementById('deadSub').textContent='nice try'; document.getElementById('deadScreen').style.display='flex'; sndGameOver(); stopBgMusic(); return; }
+  if(_shootCount>8){ _botFlagged=true; _killWithMessage('nice try'); return; }
+  // ── PATCH 10: timing variance check — ONLY for manual shots, not auto-shoot
+  // Auto-shoot fires at fixed intervals by design; checking it would flag real players
+  if(!isAuto && !_recordShot(now)) return;
   _lastShot=now;
   sndShoot();
   projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(11+wave*0.18),r:5,dead:false,trail:[]});
@@ -331,9 +397,12 @@ function drawBG(){
   ctx.fillStyle='rgba(42,92,42,0.12)'; ctx.fillRect(LANE_X-2,0,3,GH); ctx.fillRect(LANE_X+LANE_W-1,0,3,GH);
   var lg=ctx.createLinearGradient(LANE_X,0,LANE_X+LANE_W,0); lg.addColorStop(0,'#090f06'); lg.addColorStop(0.5,'#0c1508'); lg.addColorStop(1,'#090f06'); ctx.fillStyle=lg; ctx.fillRect(LANE_X,0,LANE_W,GH);
   var fg=ctx.createRadialGradient(GW/2,GH,0,GW/2,GH,GH*0.45); fg.addColorStop(0,'rgba(42,92,42,0.14)'); fg.addColorStop(1,'transparent'); ctx.fillStyle=fg; ctx.fillRect(LANE_X,0,LANE_W,GH);
+  // vine / plant decorations — left side
   ctx.fillStyle='rgba(74,222,128,0.12)';
   for(var i=0;i<3;i++){ var dx=LANE_X-6-i*9,dy=(i*151)%GH,dh=28+i*18; ctx.fillRect(dx,dy,3,dh); ctx.beginPath(); ctx.arc(dx+1.5,dy+dh,3.5,0,Math.PI*2); ctx.fill(); }
+  // vine / plant decorations — right side
   for(var i=0;i<3;i++){ var dx=LANE_X+LANE_W+3+i*9,dy=(i*103+60)%GH,dh=22+i*14; ctx.fillRect(dx,dy,3,dh); ctx.beginPath(); ctx.arc(dx+1.5,dy+dh,3,0,Math.PI*2); ctx.fill(); }
+  // skull decorations in side panels
   var skp=[[LANE_X*0.45,GH*0.22],[LANE_X*0.55,GH*0.62],[GW-(LANE_X*0.5),GH*0.38],[GW-(LANE_X*0.4),GH*0.78]];
   ctx.fillStyle='rgba(180,170,140,0.22)';
   for(var s=0;s<skp.length;s++){ var sx=skp[s][0],sy=skp[s][1]; ctx.beginPath(); ctx.arc(sx,sy,6,0,Math.PI*2); ctx.fill(); ctx.fillRect(sx-4,sy+5,8,4); ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.arc(sx-2,sy-1,1.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(sx+2,sy-1,1.5,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(180,170,140,0.22)'; }
@@ -432,7 +501,7 @@ function drawHUD(){
   ctx.fillStyle='rgba(74,222,128,0.12)'; ctx.fillRect(bx,by,bw,bh);
   ctx.fillStyle='rgba(74,222,128,0.55)'; ctx.fillRect(bx,by,bw*Math.min(score/WIN_SCORE,1),bh);
   ctx.font=Math.round(GH*0.028)+'px serif'; ctx.textAlign='left';
-  for(var i=0;i<3;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}',LANE_X+8+i*Math.round(GH*0.036),Math.round(GH*0.052));
+  for(var i=0;i<5;i++) ctx.fillText(i<lives?'\u{1F9CC}':'\u{1F480}',LANE_X+8+i*Math.round(GH*0.028),Math.round(GH*0.052));
   ctx.font=Math.round(GH*0.016)+'px "Space Mono"'; ctx.textAlign='right'; ctx.fillStyle='rgba(107,143,62,0.7)';
   ctx.fillText('W'+wave,LANE_X+LANE_W-8,Math.round(GH*0.05));
   var remaining=WIN_SCORE-score;
@@ -447,27 +516,27 @@ function gameLoop(ts){
   var spd=GW*0.55*dt;
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
-  if(keys[' ']){ if(!keys._sw) shoot(); keys._sw=true; } else keys._sw=false;
-  if(touchHeld){ autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(); } } else { autoShootTimer=0; }
+  if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
+  if(touchHeld){ autoShootTimer+=dt; var shootRate=Math.max(0.055,0.28-(wave-1)*0.018); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   spawnTimer+=dt;
-  var rate=Math.max(0.42,1.7-wave*0.11);
+  var rate=Math.max(0.55,2.0-wave*0.11);
   if(spawnTimer>=rate){
     spawnTimer=0;
-    var n=Math.min(Math.floor(wave/4)+1,2);
+    var n=Math.min(Math.floor(wave/5)+1,2);
     for(var i=0;i<n;i++){
       var type='mosquito';
       var roll=Math.random();
-      if(wave>=6 && roll<0.18) type='ape';
-      else if(wave>=3 && roll<0.42) type='punk';
+      if(wave>=8 && roll<0.15) type='ape';
+      else if(wave>=4 && roll<0.38) type='punk';
       var cfg={
-        mosquito:{r:10+Math.random()*5,spd:1.4+wave*0.08+Math.random()*0.25,hp:wave>=10?2:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:2.2+wave*0.09+Math.random()*0.3,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.95+wave*0.045+Math.random()*0.15,hp:3,pts:3}
+        mosquito:{r:10+Math.random()*5,spd:1.0+wave*0.055+Math.random()*0.2,hp:wave>=14?2:1,pts:1},
+        punk:{r:7+Math.random()*3,spd:1.5+wave*0.065+Math.random()*0.22,hp:1,pts:2},
+        ape:{r:17+Math.random()*4,spd:0.65+wave*0.03+Math.random()*0.12,hp:3,pts:3}
       }[type];
       enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false});
     }
   }
-  waveTimer+=dt; if(waveTimer>=20){ waveTimer=0; wave++; }
+  waveTimer+=dt; if(waveTimer>=28){ waveTimer=0; wave++; }
   for(var i=0;i<enemies.length;i++){ var e=enemies[i]; e.y+=e.spd; e.wobble+=0.11; if(e.type==='punk'){ e.zz+=0.18; e.x+=Math.sin(e.zz)*1.8; } else { e.x+=Math.sin(e.wobble)*0.55; } e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
@@ -487,7 +556,7 @@ function gameLoop(ts){
       }
     }
   }
-  var gr=Math.round(GH*0.05);
+  var gr=Math.round(GH*0.04);
   for(var i=0;i<enemies.length;i++){ var e=enemies[i]; if(e.dead) continue; if(e.y>GOBLIN_Y-gr){ e.dead=true; lives--; hitFlash=0.4; sndHit(); missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1}); if(lives<=0){ gameOver(); return; } } }
   enemies=enemies.filter(function(e){return !e.dead;});
   projectiles=projectiles.filter(function(p){return !p.dead;});
@@ -520,7 +589,8 @@ function togglePause(){ if(!gameRunning&&!gamePaused) return; if(gamePaused) res
 function pauseGame(){ gamePaused=true; gameRunning=false; stopAutoShoot(); document.getElementById('pauseScore').textContent=score+' kills so far'; document.getElementById('pauseScreen').style.display='flex'; document.getElementById('pauseBtn').textContent='▶'; }
 function resumeGame(){ document.getElementById('pauseScreen').style.display='none'; gamePaused=false; gameRunning=true; document.getElementById('pauseBtn').textContent='II'; lastTime=performance.now(); requestAnimationFrame(gameLoop); }
 
-function validateAndStart(){
+// ── PATCH 11: validateAndStart is now async — fetches session token before game starts
+async function validateAndStart(){
   var w=document.getElementById('startWallet').value.trim();
   var t=document.getElementById('startTwitter').value.trim();
   var err=document.getElementById('startErr');
@@ -531,6 +601,21 @@ function validateAndStart(){
   if(!t){ document.getElementById('startTwitter').classList.add('err'); err.textContent='drop your handle'; err.style.display='block'; return; }
   playerWallet=w; playerHandle=t;
   try{ localStorage.setItem('gobWallet',w); localStorage.setItem('gobHandle',t); }catch(e){}
+  // Get session token — binds this wallet to a signed server timestamp
+  try{
+    var r=await fetch(FN_BASE+'/issue-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet:w,twitter:t})
+    });
+    if(!r.ok) throw new Error('session failed');
+    var d=await r.json();
+    _sessionToken=d.token;
+    _sessionStartMs=Date.now();
+  }catch(e){
+    // If Edge Functions not deployed yet, fall through (score submissions will silently fail server-side)
+    _sessionToken=''; _sessionStartMs=Date.now();
+  }
   startGame();
 }
 
@@ -543,7 +628,7 @@ function validateAndStart(){
       document.getElementById('startTwitter').value=t;
       document.getElementById('newGoblinCard').style.display='none';
       document.getElementById('returningCard').style.display='block';
-      document.getElementById('returningHandle').textContent=t;
+      document.getElementById('returningHandle').textContent=escHtml(t);
       document.getElementById('returningWallet').textContent=w.slice(0,6)+'...'+w.slice(-4);
     }
   }catch(e){}
@@ -551,7 +636,7 @@ function validateAndStart(){
 
 function resetToNewGoblin(){
   try{ localStorage.removeItem('gobWallet'); localStorage.removeItem('gobHandle'); }catch(e){}
-  playerWallet=''; playerHandle=''; hasPlayed=false;
+  playerWallet=''; playerHandle=''; hasPlayed=false; _sessionToken='';
   document.getElementById('startWallet').value=''; document.getElementById('startTwitter').value='';
   document.getElementById('returningCard').style.display='none'; document.getElementById('newGoblinCard').style.display='block';
 }
@@ -560,7 +645,9 @@ function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block';
   document.getElementById('muteBtn').style.display='block';
-  score=0; wave=1; lives=3; hasWon=false; GOBLIN_X=GW/2; gamePaused=false; _botFlagged=false; _shootCount=0; _lastRealInput=Date.now(); _lastMouseMove=Date.now();
+  score=0; wave=1; lives=5; hasWon=false; GOBLIN_X=GW/2; gamePaused=false;
+  _botFlagged=false; _shootCount=0; _shotTimestamps=[]; // ── PATCH 12: reset variance tracker
+  _lastRealInput=Date.now(); _lastMouseMove=Date.now();
   enemies=[]; projectiles=[]; particles=[]; missTexts=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
   gameRunning=true; lastTime=performance.now(); startBgMusic(); requestAnimationFrame(gameLoop);
@@ -571,7 +658,7 @@ function goMenu(){
   document.getElementById('pauseBtn').style.display='none'; document.getElementById('muteBtn').style.display='none';
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
-  if(hasPlayed){ document.getElementById('newGoblinCard').style.display='none'; document.getElementById('returningCard').style.display='block'; document.getElementById('returningHandle').textContent=playerHandle; document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4); }
+  if(hasPlayed){ document.getElementById('newGoblinCard').style.display='none'; document.getElementById('returningCard').style.display='block'; document.getElementById('returningHandle').textContent=escHtml(playerHandle); document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4); }
 }
 
 function restartGame(){
@@ -579,25 +666,26 @@ function restartGame(){
   document.getElementById('pauseBtn').style.display='none'; document.getElementById('muteBtn').style.display='none';
   document.getElementById('startScreen').style.display='flex';
   gameRunning=false; gamePaused=false; stopAutoShoot();
-  if(hasPlayed){ document.getElementById('newGoblinCard').style.display='none'; document.getElementById('returningCard').style.display='block'; document.getElementById('returningHandle').textContent=playerHandle; document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4); }
+  if(hasPlayed){ document.getElementById('newGoblinCard').style.display='none'; document.getElementById('returningCard').style.display='block'; document.getElementById('returningHandle').textContent=escHtml(playerHandle); document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4); }
 }
 
+// ── PATCH 13: gameOver submits score through Edge Function
 function gameOver(){
   hasPlayed=true; gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('deadSub').textContent=score+' kills. back to the trenches';
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver(); stopBgMusic();
-  sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score').then(function(d){
-    if(d&&d.length){ if(score>d[0].score) sbPatch('leaderboard','id=eq.'+d[0].id,{score:score}); }
-    else{ sbPost('leaderboard',{twitter:playerHandle,wallet:playerWallet,score:score}); }
-  }).catch(function(){});
+  if(_sessionToken){
+    fnPost('submit-score',{wallet:playerWallet,twitter:playerHandle,score:score,action:'submit'})
+      .catch(function(){});
+  }
 }
 
 function winGame(){
   hasPlayed=true; gameRunning=false; gamePaused=true; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
-  document.getElementById('winInfo').textContent=playerHandle+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
+  document.getElementById('winInfo').textContent=escHtml(playerHandle)+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
   var cb=document.getElementById('claimBtn');
   cb.disabled=false; cb.textContent='claim GTD spot'; cb.style.background=''; cb.style.borderColor=''; cb.style.color='';
   document.getElementById('winErr').style.display='none';
@@ -611,31 +699,9 @@ function keepGrinding(){
   gamePaused=false; gameRunning=true; startBgMusic(); lastTime=performance.now(); requestAnimationFrame(gameLoop);
 }
 
+// claimSpot kept for any legacy call paths — now routed through checkCapAndClaim→fnPost
 async function claimSpot(){
-  var btn=document.getElementById('claimBtn');
-  btn.disabled=true; btn.textContent='locking in...';
-  try{
-    var existing=await sbGet('allowlist','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id');
-    if(existing&&existing.length){
-      btn.textContent='ur GTD goblin \u{1F9CC}'; btn.style.background='rgba(42,92,42,0.8)'; btn.style.borderColor='rgba(74,222,128,0.5)'; btn.style.color='#4ade80';
-      document.getElementById('winInfo').textContent='spot already locked in ser'; return;
-    }
-    await sbPost('allowlist',{twitter:playerHandle,wallet:playerWallet,score:score});
-    await sbPost('masterlist',{twitter:playerHandle,wallet:playerWallet},'return=minimal');
-    var lb=await sbGet('leaderboard','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id,score');
-    if(lb&&lb.length){ if(score>lb[0].score) await sbPatch('leaderboard','id=eq.'+lb[0].id,{score:score}); }
-    else{ await sbPost('leaderboard',{twitter:playerHandle,wallet:playerWallet,score:score}); }
-    btn.textContent='ur GTD goblin \u{1F9CC}'; btn.style.background='rgba(42,92,42,0.8)'; btn.style.borderColor='rgba(74,222,128,0.5)'; btn.style.color='#4ade80';
-  }catch(e){
-    try{
-      var recheck=await sbGet('allowlist','wallet=ilike.'+encodeURIComponent(playerWallet)+'&select=id');
-      if(recheck&&recheck.length){
-        btn.textContent='ur GTD goblin \u{1F9CC}'; btn.style.background='rgba(42,92,42,0.8)'; btn.style.borderColor='rgba(74,222,128,0.5)'; btn.style.color='#4ade80';
-        document.getElementById('winInfo').textContent='spot locked in ser'; return;
-      }
-    }catch(e2){}
-    btn.disabled=false; btn.textContent='broke. try again';
-  }
+  await checkCapAndClaim();
 }
 
 var lbTab='all';
@@ -672,15 +738,17 @@ function loadLbData(){
     for(var i=0;i<d.length;i++){
       var p=d[i]; if(!p.wallet) continue;
       var rank=medals[i]||(i+1),isTop=i<3;
-      out+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid rgba(74,222,128,0.08);'+(isTop?'background:rgba(74,222,128,0.04);border-radius:4px;':'')+'"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:'+(isTop?'.9':'0.75')+'rem;min-width:24px;">'+rank+'</span><div><div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.twitter||'anon')+'</div><div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;">'+p.wallet.slice(0,6)+'...'+p.wallet.slice(-4)+'</div></div></div><div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+(p.score||0)+' kills</div></div>';
+      out+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid rgba(74,222,128,0.08);'+(isTop?'background:rgba(74,222,128,0.04);border-radius:4px;':'')+'"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:'+(isTop?'.9':'0.75')+'rem;min-width:24px;">'+rank+'</span><div><div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.twitter||'anon')+'</div><div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;">'+escHtml(p.wallet.slice(0,6))+'...'+escHtml(p.wallet.slice(-4))+'</div></div></div><div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+(p.score||0)+' kills</div></div>';
     }
     list.innerHTML=out;
   }).catch(function(){ list.innerHTML='<div style="font-size:.55rem;color:#cc2200;text-align:center;padding:20px;">failed to load</div>'; });
 }
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ── PATCH 14: escHtml now also escapes quotes
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// takeSnapshot — original function, untouched
 async function takeSnapshot(){
-  var status=document.getElementById('snapshotStatus');
+  var status=document.getElementById('ogSnapshotStatus');
   var slist=document.getElementById('snapshotList');
   status.textContent='pulling top 50...'; status.style.display='block'; slist.style.display='none';
   try{
@@ -742,7 +810,8 @@ async function importWallets(){
 async function clearLeaderboard(){
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus'); status.textContent='wiping...'; status.style.display='block';
-  try{ await sbDelete('leaderboard','id=gt.0'); status.textContent='leaderboard wiped'; }catch(e){ status.textContent='failed'; }
+  // ── PATCH 15: use score=gte.0 — safe for both integer and UUID primary keys
+  try{ await sbDelete('leaderboard','score=gte.0'); status.textContent='leaderboard wiped'; }catch(e){ status.textContent='failed'; }
 }
 
 async function runSnapshot(){
@@ -771,7 +840,8 @@ async function runSnapshot(){
 async function clearPhase(){
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus'); status.textContent='clearing...'; status.style.display='block';
-  try{ await sbDelete('allowlist','id=gt.0'); status.textContent='cleared!'; }catch(e){ status.textContent='failed'; }
+  // ── PATCH 16: same fix as clearLeaderboard — score=gte.0 safe for any PK type
+  try{ await sbDelete('allowlist','score=gte.0'); status.textContent='cleared!'; }catch(e){ status.textContent='failed'; }
 }
 
 function checkWallet(){
@@ -795,7 +865,7 @@ function checkWallet(){
       var val=parseInt(row.value);
       if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
       if(row.name==='GtdCap'&&val>0){ GTD_CAP=val; var el=document.getElementById('adminCap'); if(el) el.value=GTD_CAP; }
-      if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
+      // ── PATCH 17: removed duplicate WinScore block that was here in original
     });
   }).catch(function(){});
 })();
@@ -809,7 +879,8 @@ return {
   resumeGame:resumeGame, toggleMute:toggleMute, adminTap:adminTap,
   checkAdminPass:checkAdminPass, saveAdminScore:saveAdminScore, saveAdminCap:saveAdminCap,
   exportWallets:exportWallets, importWallets:importWallets, clearLeaderboard:clearLeaderboard,
-  clearPhase:clearPhase, checkWallet:checkWallet, runSnapshot:runSnapshot, setLbTab:setLbTab, takeSnapshot:takeSnapshot
+  clearPhase:clearPhase, checkWallet:checkWallet, runSnapshot:runSnapshot,
+  setLbTab:setLbTab, takeSnapshot:takeSnapshot
 };
 
 })();
