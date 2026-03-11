@@ -369,7 +369,7 @@ canvas#bgCanvas{
 <script>
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 // ▼▼▼ swap with your publishable key ▼▼▼
-var SB_KEY='PASTE_NEW_ANON_KEY_HERE';
+var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 var checkerOn=true, gameOn=true;
 
@@ -428,15 +428,30 @@ async function doCheck(){
   }
   btn.disabled=true; btn.textContent='...';
   try{
-    var r=await fetch(SB+'/masterlist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
+    // check allowlist first (has source tag)
+    var r=await fetch(SB+'/allowlist?wallet=ilike.'+encodeURIComponent(w)+'&select=source',{headers:sbH()});
     var data=await r.json();
     res.style.display='block';
     if(data&&data.length){
-      res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
-      res.textContent='ur GTD goblin 🧌';
+      var src=data[0].source||'fcfs';
+      if(src==='gtd'){
+        res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+        res.textContent='ur GTD goblin \uD83E\uDDCC';
+      }else{
+        res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+        res.textContent='ur on the goblist \uD83E\uDDCC';
+      }
     }else{
-      res.style.cssText='display:block;background:rgba(80,0,0,.3);border:1px solid rgba(204,34,0,.3);color:#cc2200;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
-      res.textContent='ngmi ser';
+      // fallback: check masterlist for older entries without source
+      var r2=await fetch(SB+'/masterlist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
+      var data2=await r2.json();
+      if(data2&&data2.length){
+        res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+        res.textContent='ur on the goblist \uD83E\uDDCC';
+      }else{
+        res.style.cssText='display:block;background:rgba(80,0,0,.3);border:1px solid rgba(204,34,0,.3);color:#cc2200;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+        res.textContent='ngmi ser';
+      }
     }
   }catch(e){ res.style.display='block'; res.style.color='#cc2200'; res.textContent='try again'; }
   btn.disabled=false; btn.textContent='check';
