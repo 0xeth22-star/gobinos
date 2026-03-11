@@ -372,7 +372,7 @@ canvas#bgCanvas{
 
 <script>
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-// ▼▼▼ swap with your publishable key ▼▼▼
+
 var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
 var checkerOn=true, gameOn=true;
@@ -431,6 +431,7 @@ async function doCheck(){
     document.getElementById('checkInput').classList.add('err'); return;
   }
   btn.disabled=true; btn.textContent='...';
+  res.style.display='none'; res.textContent='';
   try{
     // check GTD first (masterlist)
     var r1=await fetch(SB+'/masterlist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
