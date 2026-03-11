@@ -341,12 +341,16 @@ canvas#bgCanvas{
 
       <div class="s-div">
         <div class="s-lbl">export</div>
-        <button class="a-btn sm ghost" onclick="exportWallets('allowlist')">export allowlist</button>
-        <button class="a-btn sm ghost" onclick="exportWallets('masterlist')" style="margin-top:4px;">export masterlist</button>
+        <button class="a-btn sm ghost" onclick="exportWallets('masterlist')">export GTD (masterlist)</button>
+        <button class="a-btn sm ghost" onclick="exportWallets('goblist')" style="margin-top:4px;">export FCFS (goblist)</button>
       </div>
 
       <div class="s-div">
         <div class="s-lbl">import wallets</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button id="tagGtd" onclick="setTag('gtd')" style="flex:1;padding:7px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.5);border-radius:3px;color:#4ade80;font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:2px;cursor:pointer;">GTD</button>
+          <button id="tagFcfs" onclick="setTag('fcfs')" style="flex:1;padding:7px;background:transparent;border:1px solid rgba(74,222,128,0.2);border-radius:3px;color:rgba(74,222,128,0.4);font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:2px;cursor:pointer;">FCFS</button>
+        </div>
         <div class="admin-field">
           <textarea id="importData" rows="4" placeholder="0x...&#10;0x..."></textarea>
         </div>
@@ -428,27 +432,22 @@ async function doCheck(){
   }
   btn.disabled=true; btn.textContent='...';
   try{
-    // check allowlist first (has source tag)
-    var r=await fetch(SB+'/allowlist?wallet=ilike.'+encodeURIComponent(w)+'&select=source',{headers:sbH()});
-    var data=await r.json();
-    res.style.display='block';
-    if(data&&data.length){
-      var src=data[0].source||'fcfs';
-      if(src==='gtd'){
-        res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
-        res.textContent='ur GTD goblin \uD83E\uDDCC';
-      }else{
-        res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
-        res.textContent='ur on the goblist \uD83E\uDDCC';
-      }
-    }else{
-      // fallback: check masterlist for older entries without source
-      var r2=await fetch(SB+'/masterlist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
-      var data2=await r2.json();
-      if(data2&&data2.length){
+    // check GTD first (masterlist)
+    var r1=await fetch(SB+'/masterlist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
+    var gtd=await r1.json();
+    if(gtd&&gtd.length){
+      res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
+      res.textContent='ur GTD goblin \uD83E\uDDCC';
+      res.style.display='block';
+    } else {
+      // check FCFS (goblist)
+      var r2=await fetch(SB+'/goblist?wallet=ilike.'+encodeURIComponent(w)+'&select=id',{headers:sbH()});
+      var fcfs=await r2.json();
+      res.style.display='block';
+      if(fcfs&&fcfs.length){
         res.style.cssText='display:block;background:rgba(42,92,42,.3);border:1px solid rgba(74,222,128,.3);color:#4ade80;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
         res.textContent='ur on the goblist \uD83E\uDDCC';
-      }else{
+      } else {
         res.style.cssText='display:block;background:rgba(80,0,0,.3);border:1px solid rgba(204,34,0,.3);color:#cc2200;padding:10px;border-radius:4px;text-align:center;font-size:.6rem;letter-spacing:2px;margin-top:4px;';
         res.textContent='ngmi ser';
       }
@@ -497,7 +496,7 @@ function toggleGame(){ gameOn=!gameOn; applyGame(); sbPatchConfig('GameOn',gameO
 function toggleChecker(){ checkerOn=!checkerOn; applyChecker(); sbPatchConfig('Checker',checkerOn?'1':'0'); showStatus('checker '+(checkerOn?'on':'off'),false); }
 
 async function exportWallets(type){
-  var tbl=type==='masterlist'?'masterlist':'allowlist';
+  var tbl=(type==='masterlist')?'masterlist':(type==='goblist')?'goblist':'masterlist';
   showStatus('fetching...',false);
   try{
     var r=await fetch(SB+'/'+tbl+'?select=wallet&limit=10000',{headers:sbH()});
@@ -508,23 +507,34 @@ async function exportWallets(type){
   }catch(e){showStatus('failed',true);}
 }
 
+var _tag='gtd';
+function setTag(t){
+  _tag=t;
+  document.getElementById('tagGtd').style.background=t==='gtd'?'rgba(74,222,128,0.15)':'transparent';
+  document.getElementById('tagGtd').style.color=t==='gtd'?'#4ade80':'rgba(74,222,128,0.4)';
+  document.getElementById('tagGtd').style.borderColor=t==='gtd'?'rgba(74,222,128,0.5)':'rgba(74,222,128,0.2)';
+  document.getElementById('tagFcfs').style.background=t==='fcfs'?'rgba(74,222,128,0.15)':'transparent';
+  document.getElementById('tagFcfs').style.color=t==='fcfs'?'#4ade80':'rgba(74,222,128,0.4)';
+  document.getElementById('tagFcfs').style.borderColor=t==='fcfs'?'rgba(74,222,128,0.5)':'rgba(74,222,128,0.2)';
+}
+
 async function importWallets(){
   var raw=document.getElementById('importData').value.trim();
   var handle=document.getElementById('importHandle').value.trim()||'collab';
   if(!raw){showStatus('paste wallets first',true);return;}
   var wallets=raw.split(/[\n,]+/).map(function(w){return w.trim();}).filter(function(w){return /^0x[a-fA-F0-9]{40}$/.test(w);});
   if(!wallets.length){showStatus('no valid wallets',true);return;}
-  showStatus('importing '+wallets.length+'...',false);
+  var table=_tag==='gtd'?'masterlist':'goblist';
+  showStatus('importing '+wallets.length+' to '+table+'...',false);
   var ok=0;
   for(var i=0;i<wallets.length;i++){
     try{
-      await fetch(SB+'/allowlist',{method:'POST',headers:Object.assign(sbH(),{'Prefer':'return=minimal'}),body:JSON.stringify({twitter:handle,wallet:wallets[i],score:0})});
-      await fetch(SB+'/masterlist',{method:'POST',headers:Object.assign(sbH(),{'Prefer':'return=minimal'}),body:JSON.stringify({twitter:handle,wallet:wallets[i]})});
+      await fetch(SB+'/'+table,{method:'POST',headers:Object.assign(sbH(),{'Prefer':'return=minimal'}),body:JSON.stringify({twitter:handle,wallet:wallets[i]})});
       ok++;
     }catch(e){}
     if(i%10===0) showStatus('importing... '+ok+'/'+wallets.length,false);
   }
-  showStatus('done. '+ok+' imported',false);
+  showStatus('done. '+ok+' added to '+(_tag==='gtd'?'GTD':'FCFS'),false);
   document.getElementById('importData').value='';
 }
 
