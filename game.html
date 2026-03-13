@@ -862,7 +862,7 @@ async function checkAdminPass(){
 }
 
 async function exportWallets(type){
-  var tbl=type==='masterlist'?'masterlist':'allowlist';
+  var tbl=type==='masterlist'?'masterlist':'goblist';
   try{ var d=await sbGet(tbl,'select=wallet&limit=10000'); var lines=(d||[]).filter(function(r){return r.wallet;}).map(function(r){return r.wallet;}); var blob=new Blob([lines.join('\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gobinos-'+type+'.txt'; a.click(); }catch(e){ alert('export failed'); }
 }
 
@@ -892,23 +892,58 @@ async function clearLeaderboard(){
 async function runSnapshot(){
   var status=document.getElementById('snapshotStatus');
   var tweet=document.getElementById('snapshotTweet');
-  status.textContent='pulling top 50...'; status.style.display='block'; tweet.style.display='none';
+  status.textContent='pulling leaderboard...'; status.style.display='block'; tweet.style.display='none';
   try{
-    var d=await sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=50');
-    if(!d||!d.length){ status.textContent='no entries yet'; return; }
-    var snapId='snap_'+new Date().toISOString().slice(0,10).replace(/-/g,'');
-    var ok=0;
-    for(var i=0;i<d.length;i++){
-      try{
-        await sbPost('og_list',{wallet:d[i].wallet,twitter:d[i].twitter,score:d[i].score,snapshot_id:snapId,rank:i+1},'return=minimal');
-        ok++;
-      }catch(e){}
+    // score=gt.0 filters wallets that loaded but never scored a kill
+    var rows=await sbGet('leaderboard','select=twitter,wallet,score&order=score.desc&limit=2000&score=gt.0');
+    if(!rows||!rows.length){ status.textContent='no entries yet'; return; }
+
+    // deduplicate by wallet — first occurrence = best score (already sorted DESC)
+    var seen={}, deduped=[];
+    for(var i=0;i<rows.length;i++){
+      var p=rows[i]; if(!p.wallet) continue;
+      var key=p.wallet.toLowerCase();
+      if(!seen[key]){ seen[key]=true; deduped.push(p); }
     }
-    // build tweet copy
-    var lines=d.slice(0,50).map(function(p,i){ return (i+1)+'. '+(p.twitter||'anon')+' — '+p.score+' kills'; });
-    var tweetText='gobinos snapshot '+snapId+'\n\ntop goblins in the trenches\n\n'+lines.slice(0,10).join('\n')+'\n\n...and '+(d.length-10)+' more\n\ngobinos.wtf\n@gobinosoneth';
+
+    var top100=deduped.slice(0,100);
+    var rest=deduped.slice(100);
+    var snapId='snap_'+new Date().toISOString().slice(0,10).replace(/-/g,'');
+    var gtdOk=0, gobOk=0;
+
+    // ── write top 100 → masterlist (GTD)
+    status.textContent='writing '+top100.length+' to masterlist (GTD)...';
+    for(var i=0;i<top100.length;i++){
+      try{
+        await fetch(SB+'/masterlist?on_conflict=wallet',{
+          method:'POST',
+          headers:Object.assign(sbH(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
+          body:JSON.stringify({twitter:top100[i].twitter,wallet:top100[i].wallet.toLowerCase(),score:top100[i].score})
+        });
+        gtdOk++;
+      }catch(e){}
+      if(i%10===0) status.textContent='GTD: '+gtdOk+'/'+(i+1)+'...';
+    }
+
+    // ── write rest → goblist (goblist)
+    status.textContent='writing '+rest.length+' to goblist...';
+    for(var i=0;i<rest.length;i++){
+      try{
+        await fetch(SB+'/goblist?on_conflict=wallet',{
+          method:'POST',
+          headers:Object.assign(sbH(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
+          body:JSON.stringify({twitter:rest[i].twitter,wallet:rest[i].wallet.toLowerCase(),score:rest[i].score})
+        });
+        gobOk++;
+      }catch(e){}
+      if(i%10===0) status.textContent='goblist: '+gobOk+'/'+(i+1)+'...';
+    }
+
+    // ── tweet copy
+    var lines=top100.slice(0,10).map(function(p,i){ return (i+1)+'. '+(p.twitter||'anon')+' — '+p.score+' kills'; });
+    var tweetText='gobinos snapshot · '+snapId+'\n\ntop goblins locked in\n\n'+lines.join('\n')+'\n\n...and '+(top100.length-10)+' more GTD\n\n'+rest.length+' on the goblist\n\ngobinos.wtf\n@gobinosoneth';
     tweet.value=tweetText; tweet.style.display='block';
-    status.textContent='done! '+ok+'/'+d.length+' saved. snapshot: '+snapId;
+    status.textContent='done · '+gtdOk+' GTD · '+gobOk+' goblist · '+deduped.length+' total · '+snapId;
   }catch(e){ status.textContent='failed: '+e.message; }
 }
 
