@@ -718,17 +718,33 @@ function restartGame(){
   if(hasPlayed){ document.getElementById('newGoblinCard').style.display='none'; document.getElementById('returningCard').style.display='block'; document.getElementById('returningHandle').textContent=escHtml(playerHandle); document.getElementById('returningWallet').textContent=playerWallet.slice(0,6)+'...'+playerWallet.slice(-4); }
 }
 
-// ── PATCH 13: gameOver submits score through Edge Function
+// ── FIX 1B: direct upsert fallback — fires when Edge Function unavailable / no session token
+// Requires: ALTER TABLE leaderboard ADD CONSTRAINT leaderboard_wallet_unique UNIQUE (wallet);
+// + RLS INSERT policy for anon role on leaderboard table
+function _submitDirect(w,t,sc){
+  fetch(SB+'/leaderboard?on_conflict=wallet',{
+    method:'POST',
+    headers:Object.assign(sbH(),{'Prefer':'return=minimal,resolution=merge-duplicates'}),
+    body:JSON.stringify({wallet:w,twitter:t,score:sc})
+  }).catch(function(){});
+}
+function _submitScore(w,t,sc){
+  var payload={wallet:w,twitter:t,score:sc,action:'submit'};
+  if(_sessionToken){
+    fnPost('submit-score',payload).catch(function(){ _submitDirect(w,t,sc); });
+  } else {
+    _submitDirect(w,t,sc);
+  }
+}
+
+// ── PATCH 13: gameOver submits score — edge function if token present, direct upsert fallback if not
 function gameOver(){
   hasPlayed=true; gameRunning=false; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('deadSub').textContent=score+' kills. back to the trenches';
   document.getElementById('deadScreen').style.display='flex';
   sndGameOver(); stopBgMusic();
-  if(_sessionToken){
-    fnPost('submit-score',{wallet:playerWallet,twitter:playerHandle,score:score,action:'submit'})
-      .catch(function(){});
-  }
+  _submitScore(playerWallet,playerHandle,score);
 }
 
 function winGame(){
@@ -771,9 +787,12 @@ function showLeaderboard(){
   lbRefreshTimer=setInterval(function(){ if(document.getElementById('lbScreen').style.display!=='none') loadLbData(); else{ clearInterval(lbRefreshTimer); lbRefreshTimer=null; } },15000);
   loadLbData();
 }
+// ── FIX 1A: deduplicate by wallet — same wallet can have many rows (one per session)
+// rows arrive score DESC so first occurrence per wallet = best score
 function loadLbData(){
   var list=document.getElementById('lbList');
-  var qs='select=twitter,wallet,score&order=score.desc&limit=1000';
+  list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">loading...</div>';
+  var qs='select=twitter,wallet,score&order=score.desc&limit=2000';
   if(lbTab==='week'){
     var d=new Date(); d.setDate(d.getDate()-7);
     qs+='&created_at=gte.'+d.toISOString();
@@ -781,11 +800,18 @@ function loadLbData(){
     var d=new Date(); d.setHours(0,0,0,0);
     qs+='&created_at=gte.'+d.toISOString();
   }
-  sbGet('leaderboard',qs).then(function(d){
-    if(!d||!d.length){ list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>'; return; }
+  sbGet('leaderboard',qs).then(function(rows){
+    if(!rows||!rows.length){ list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">no kills yet</div>'; return; }
+    // deduplicate: keep first occurrence per wallet (highest score, since sorted DESC)
+    var seen={}, deduped=[];
+    for(var i=0;i<rows.length;i++){
+      var p=rows[i]; if(!p.wallet) continue;
+      var key=p.wallet.toLowerCase();
+      if(!seen[key]){ seen[key]=true; deduped.push(p); }
+    }
     var medals=['[1]','[2]','[3]'],out='';
-    for(var i=0;i<d.length;i++){
-      var p=d[i]; if(!p.wallet) continue;
+    for(var i=0;i<deduped.length;i++){
+      var p=deduped[i];
       var rank=medals[i]||(i+1),isTop=i<3;
       out+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px;border-bottom:1px solid rgba(74,222,128,0.08);'+(isTop?'background:rgba(74,222,128,0.04);border-radius:4px;':'')+'"><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:'+(isTop?'.9':'0.75')+'rem;min-width:24px;">'+rank+'</span><div><div style="font-size:.62rem;color:#e8dcc8;letter-spacing:1px;">'+escHtml(p.twitter||'anon')+'</div><div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;">'+escHtml(p.wallet.slice(0,6))+'...'+escHtml(p.wallet.slice(-4))+'</div></div></div><div style="font-size:'+(isTop?'.75':'0.62')+'rem;color:#4ade80;font-weight:bold;letter-spacing:1px;">'+(p.score||0)+' kills</div></div>';
     }
