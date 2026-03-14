@@ -22,7 +22,7 @@ html,body{
   color:var(--bone);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   overflow-x:hidden;
-  opacity:0;transition:opacity .18s;
+  opacity:1;
 }
 body::before{
   content:'';position:fixed;inset:0;
@@ -178,10 +178,17 @@ canvas#bgCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:non
   <div class="card" id="mainCard">
 
     <!-- CAMPAIGN CLOSED -->
-    <div id="closedState" style="display:none;">
-      <span class="closed-icon">🔒</span>
-      <div class="closed-title">spots closed</div>
-      <div class="closed-sub">upgrade campaign has ended<br>follow @gobinosoneth for updates</div>
+    <div id="closedState" style="display:none;text-align:center;padding:12px 0;">
+      <div style="font-size:.38rem;color:rgba(107,143,62,0.4);letter-spacing:5px;text-transform:uppercase;margin-bottom:28px;">upgrade campaign</div>
+      <div style="font-size:.58rem;color:rgba(232,220,200,0.25);letter-spacing:3px;line-height:3;margin-bottom:28px;">not open yet<br><span style="color:rgba(74,222,128,0.3);">@gobinosoneth</span> for the drop</div>
+      <div style="font-size:.38rem;color:rgba(107,143,62,0.25);letter-spacing:3px;text-transform:uppercase;">march 16 · eth · 0.0018</div>
+    </div>
+
+    <!-- SPOTS FULL -->
+    <div id="fullState" style="display:none;text-align:center;padding:12px 0;">
+      <div style="font-size:.38rem;color:rgba(107,143,62,0.4);letter-spacing:5px;text-transform:uppercase;margin-bottom:28px;">upgrade campaign</div>
+      <div style="font-size:.58rem;color:rgba(204,34,0,0.4);letter-spacing:3px;line-height:3;margin-bottom:28px;">spots gone ser<br><span style="font-size:.48rem;color:rgba(232,220,200,0.2);">all GTD spots claimed</span></div>
+      <div style="font-size:.38rem;color:rgba(107,143,62,0.25);letter-spacing:3px;text-transform:uppercase;">follow @gobinosoneth</div>
     </div>
 
     <!-- STEP 1: wallet check -->
@@ -247,6 +254,7 @@ async function init(){
     if(d&&d.length){
       d.forEach(function(row){
         if(row.name==='UpgradeOn') upgradeOn=row.value==='1';
+        if(row.name==='GtdCap') window._gtdCap=parseInt(row.value)||350;
       });
     }
   }catch(e){}
@@ -255,11 +263,18 @@ async function init(){
     document.getElementById('closedState').style.display='block';
     document.getElementById('step1').classList.remove('active');
     document.getElementById('progressDots').style.display='none';
+    return;
   }
 
-  (document.fonts?document.fonts.ready:Promise.resolve()).then(function(){
-    document.body.style.opacity='1';
-  });
+  // check if spots already full
+  try{
+    var ml=await sbGet('masterlist','select=id&limit=1&offset='+((window._gtdCap||350)-1));
+    if(ml&&ml.length>=(window._gtdCap||350)){
+      document.getElementById('fullState').style.display='block';
+      document.getElementById('step1').classList.remove('active');
+      document.getElementById('progressDots').style.display='none';
+    }
+  }catch(e){}
 }
 
 function setDots(active){
@@ -345,8 +360,15 @@ async function submitUpgrade(){
   btn.disabled=true; btn.textContent='locking in spot...';
 
   try{
-    // check cap still open — count masterlist
-    var cnt=await fetch(SB+'/masterlist?select=id',{headers:Object.assign(sbH(),{'Prefer':'count=exact','Range':'0-0'})});
+    // check cap still open
+    var cntResp=await fetch(SB+'/masterlist?select=id',{headers:Object.assign(sbH(),{'Prefer':'count=exact','Range':'0-0'})});
+    var cntTotal=parseInt(cntResp.headers.get('content-range')||'0/0').toString().split('/')[1]||0;
+    if(parseInt(cntTotal)>=(window._gtdCap||350)){
+      document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+      document.getElementById('fullState').style.display='block';
+      document.getElementById('progressDots').style.display='none';
+      return;
+    }
     // write to masterlist
     await sbPost('masterlist',{wallet:currentWallet,twitter:currentTwitter,upgrade_tweet:link},'return=minimal,resolution=merge-duplicates');
     // write tweet proof to upgrade_log if exists (silent fail ok)
