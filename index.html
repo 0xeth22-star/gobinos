@@ -295,6 +295,7 @@ canvas#bgCanvas{
   <div class="tagline">goblins only · no rules</div>
 
   <a href="/game" class="enter-btn" id="enterBtn" style="display:none">enter the trenches</a>
+  <a href="/upgrade" id="upgradeBtn" style="display:none;margin-top:14px;font-family:'Space Mono',monospace;font-size:.5rem;letter-spacing:3px;color:rgba(74,222,128,0.6);text-transform:uppercase;text-decoration:none;border:1px solid rgba(74,222,128,0.2);padding:8px 18px;border-radius:3px;font-weight:700;">goblist upgrade</a>
 
   <div id="teaserBlock" style="display:flex;flex-direction:column;align-items:center;gap:0;">
     <div style="font-size:0.42rem;color:rgba(107,143,62,0.45);letter-spacing:5px;text-transform:uppercase;margin-bottom:28px;">something is coming</div>
@@ -375,7 +376,7 @@ var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 
 var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
-var checkerOn=true, gameOn=true;
+var checkerOn=true, gameOn=true, upgradeOn=false;
 
 function sbH(){ return {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}; }
 async function hashStr(s){
@@ -392,6 +393,7 @@ async function init(){
         d.forEach(function(row){
           if(row.name==='GameOn') gameOn=row.value!=='0';
           if(row.name==='Checker') checkerOn=row.value!=='0';
+          if(row.name==='UpgradeOn') upgradeOn=row.value==='1';
         });
       }
     }catch(e){}
@@ -411,6 +413,7 @@ async function init(){
 
 function applyGame(){
   document.getElementById('enterBtn').style.display=gameOn?'inline-block':'none';
+  document.getElementById('upgradeBtn').style.display=upgradeOn?'inline-block':'none';
   document.getElementById('teaserBlock').style.display=gameOn?'none':'flex';
   var b=document.getElementById('gameToggleBtn');
   if(b) b.textContent='game: '+(gameOn?'live':'hidden');
