@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upgrade · Gobinos</title>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#2a5c2a;
+  --bright:#4ade80;
+  --mud:#060a04;
+  --slime:#6b8f3e;
+  --bone:#e8dcc8;
+  --blood:#cc2200;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;min-height:100vh;
+  background:var(--mud);
+  font-family:'Space Mono',monospace;
+  color:var(--bone);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  overflow-x:hidden;
+  opacity:0;transition:opacity .18s;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 50% 100%,rgba(42,92,42,0.18) 0%,transparent 70%),
+             radial-gradient(ellipse 80% 60% at 20% 50%,rgba(20,40,10,0.4) 0%,transparent 60%),
+             radial-gradient(ellipse 80% 60% at 80% 50%,rgba(20,40,10,0.4) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:linear-gradient(90deg,rgba(4,7,2,0.92) 0%,transparent 18%),
+             linear-gradient(270deg,rgba(4,7,2,0.92) 0%,transparent 18%);
+  pointer-events:none;z-index:0;
+}
+canvas#bgCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.3;}
+
+.page{
+  position:relative;z-index:10;
+  width:100%;max-width:420px;
+  padding:40px 24px 60px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;
+}
+
+/* ── header ── */
+.gob-icon{font-size:3.2rem;line-height:1;margin-bottom:16px;filter:drop-shadow(0 0 18px rgba(74,222,128,0.3));animation:bob 3s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+.title{font-family:'Creepster',cursive;font-size:clamp(2rem,10vw,3.2rem);color:var(--bright);letter-spacing:5px;text-align:center;line-height:1;text-shadow:0 0 40px rgba(74,222,128,0.3);animation:flicker 6s infinite;}
+@keyframes flicker{0%,95%,100%{opacity:1;}96%{opacity:.82;}97%{opacity:1;}98%{opacity:.9;}99%{opacity:1;}}
+.subtitle{font-size:.56rem;color:rgba(232,220,200,0.35);letter-spacing:4px;text-transform:uppercase;margin-top:8px;margin-bottom:36px;text-align:center;}
+
+/* ── card ── */
+.card{
+  width:100%;
+  background:#0d0d0a;
+  border:1px solid rgba(107,143,62,0.35);
+  border-radius:6px;
+  padding:28px 24px;
+  position:relative;
+}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--bright),transparent);}
+
+/* ── closed state ── */
+#closedState{text-align:center;padding:8px 0;}
+.closed-icon{font-size:2rem;margin-bottom:12px;display:block;}
+.closed-title{font-family:'Creepster',cursive;font-size:1.4rem;color:rgba(74,222,128,0.5);letter-spacing:3px;margin-bottom:8px;}
+.closed-sub{font-size:.52rem;color:rgba(232,220,200,0.3);letter-spacing:2px;line-height:2;}
+
+/* ── steps ── */
+.step{display:none;}
+.step.active{display:block;}
+
+.step-label{font-size:.42rem;color:rgba(107,143,62,0.5);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;}
+.step-title{font-family:'Creepster',cursive;font-size:1.5rem;color:var(--bright);letter-spacing:3px;margin-bottom:6px;}
+.step-sub{font-size:.52rem;color:rgba(232,220,200,0.35);letter-spacing:2px;line-height:2.2;margin-bottom:20px;}
+
+.inp{
+  width:100%;background:rgba(0,0,0,.5);
+  border:1px solid rgba(107,143,62,.25);border-radius:4px;
+  padding:12px 14px;color:var(--bone);
+  font-family:'Space Mono',monospace;font-size:.72rem;
+  outline:none;margin-bottom:8px;text-align:center;letter-spacing:1px;
+  transition:border-color .2s;
+}
+.inp:focus{border-color:rgba(74,222,128,.45);}
+.inp.err{border-color:rgba(204,34,0,.55);}
+.inp::placeholder{color:rgba(232,220,200,.15);}
+
+.err-msg{font-size:.48rem;color:var(--blood);letter-spacing:1px;margin-bottom:8px;display:none;}
+
+.btn{
+  width:100%;padding:14px;
+  background:rgba(30,74,30,0.65);
+  border:1px solid rgba(74,222,128,.4);
+  border-radius:4px;color:var(--bone);
+  font-family:'Creepster',cursive;font-size:1.05rem;
+  letter-spacing:3px;cursor:pointer;text-transform:uppercase;
+  margin-top:6px;transition:all .2s;white-space:nowrap;
+  position:relative;
+}
+.btn::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(74,222,128,0.5),transparent);}
+.btn:hover:not(:disabled){background:rgba(42,92,42,0.8);letter-spacing:4px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.ghost{background:rgba(0,0,0,.3);border-color:rgba(107,143,62,.2);font-size:.85rem;color:rgba(232,220,200,0.45);}
+.btn.ghost:hover{background:rgba(0,0,0,.5);}
+
+/* ── tweet box ── */
+.tweet-box{
+  width:100%;
+  background:rgba(0,0,0,0.5);
+  border:1px solid rgba(107,143,62,0.2);
+  border-radius:4px;
+  padding:14px;
+  font-size:.62rem;
+  color:rgba(232,220,200,0.7);
+  line-height:2;
+  letter-spacing:.5px;
+  margin-bottom:16px;
+  white-space:pre-line;
+  position:relative;
+}
+.tweet-copy-btn{
+  position:absolute;top:8px;right:8px;
+  background:rgba(42,92,42,0.5);
+  border:1px solid rgba(74,222,128,.25);
+  border-radius:3px;
+  color:rgba(74,222,128,0.7);
+  font-family:'Space Mono',monospace;
+  font-size:.42rem;letter-spacing:2px;
+  padding:4px 8px;cursor:pointer;
+  transition:background .15s;
+}
+.tweet-copy-btn:hover{background:rgba(42,92,42,0.8);}
+
+/* ── success ── */
+#successState{text-align:center;padding:8px 0;display:none;}
+.success-icon{font-size:2.4rem;margin-bottom:14px;display:block;}
+.success-title{font-family:'Creepster',cursive;font-size:1.8rem;color:var(--bright);letter-spacing:3px;margin-bottom:8px;}
+.success-sub{font-size:.52rem;color:rgba(74,222,128,0.45);letter-spacing:2px;line-height:2.3;}
+
+/* ── progress dots ── */
+.dots{display:flex;gap:8px;justify-content:center;margin-bottom:28px;}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(107,143,62,0.25);transition:background .25s;}
+.dot.active{background:var(--bright);}
+.dot.done{background:rgba(74,222,128,0.4);}
+
+/* ── x link ── */
+.x-link{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:20;display:flex;align-items:center;gap:8px;
+  color:rgba(232,220,200,0.25);text-decoration:none;
+  font-size:.5rem;letter-spacing:3px;text-transform:uppercase;
+  transition:color .2s;padding:8px 16px;
+}
+.x-link:hover{color:rgba(232,220,200,0.6);}
+.x-link svg{width:13px;height:13px;fill:currentColor;flex-shrink:0;}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<div class="page">
+  <span class="gob-icon">🧌</span>
+  <div class="title">GOBINOS</div>
+  <div class="subtitle">goblist upgrade · limited spots</div>
+
+  <div class="dots" id="progressDots">
+    <div class="dot active" id="dot0"></div>
+    <div class="dot" id="dot1"></div>
+    <div class="dot" id="dot2"></div>
+  </div>
+
+  <div class="card" id="mainCard">
+
+    <!-- CAMPAIGN CLOSED -->
+    <div id="closedState" style="display:none;">
+      <span class="closed-icon">🔒</span>
+      <div class="closed-title">spots closed</div>
+      <div class="closed-sub">upgrade campaign has ended<br>follow @gobinosoneth for updates</div>
+    </div>
+
+    <!-- STEP 1: wallet check -->
+    <div class="step active" id="step1">
+      <div class="step-label">step 1 of 3</div>
+      <div class="step-title">check your spot</div>
+      <div class="step-sub">enter your wallet to see if you're eligible to upgrade</div>
+      <input class="inp" id="walletInput" placeholder="0x... wallet" maxlength="42" autocomplete="off" spellcheck="false">
+      <div class="err-msg" id="step1Err"></div>
+      <button class="btn" id="checkBtn" onclick="checkWallet()">check eligibility</button>
+    </div>
+
+    <!-- STEP 2: tweet -->
+    <div class="step" id="step2">
+      <div class="step-label">step 2 of 3</div>
+      <div class="step-title">post your upgrade</div>
+      <div class="step-sub">post this tweet then paste the link below</div>
+      <div class="tweet-box" id="tweetBox">
+        <button class="tweet-copy-btn" onclick="copyTweet()">copy</button>
+I just upgraded my goblist spot to GTD via @gobinosoneth
+
+Chain : ETH
+Mint date : March 16
+Mint link : https://opensea.io/collection/gobinosoneth/overview
+
+THE GOBINOS IS COMING 🧌</div>
+      <button class="btn" id="tweetBtn" onclick="openTweet()" style="margin-bottom:16px;">post on 𝕏</button>
+      <div class="step-sub" style="margin-bottom:8px;">paste your tweet link</div>
+      <input class="inp" id="tweetLink" placeholder="https://x.com/..." autocomplete="off" spellcheck="false">
+      <div class="err-msg" id="step2Err"></div>
+      <button class="btn" id="submitBtn" onclick="submitUpgrade()">claim GTD spot</button>
+      <button class="btn ghost" onclick="goBack()" style="margin-top:6px;">← back</button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="successState">
+      <span class="success-icon">🧌</span>
+      <div class="success-title">ur GTD goblin</div>
+      <div class="success-sub" id="successSub">spot locked in ser<br>see you in the trenches</div>
+    </div>
+
+  </div>
+</div>
+
+<a href="https://x.com/gobinosoneth" target="_blank" class="x-link">
+  <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.738l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+  @gobinosoneth
+</a>
+
+<script>
+var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
+var upgradeOn=false;
+var currentWallet='', currentTwitter='';
+
+function sbH(extra){ return Object.assign({'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},extra||{}); }
+async function sbGet(t,qs){ var r=await fetch(SB+'/'+t+(qs?'?'+qs:''),{headers:sbH()}); return r.json(); }
+async function sbPost(t,body,prefer){ var r=await fetch(SB+'/'+t,{method:'POST',headers:sbH({'Prefer':prefer||'return=minimal'}),body:JSON.stringify(body)}); return r; }
+
+async function init(){
+  try{
+    var d=await sbGet('config','select=name,value');
+    if(d&&d.length){
+      d.forEach(function(row){
+        if(row.name==='UpgradeOn') upgradeOn=row.value==='1';
+      });
+    }
+  }catch(e){}
+
+  if(!upgradeOn){
+    document.getElementById('closedState').style.display='block';
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('progressDots').style.display='none';
+  }
+
+  (document.fonts?document.fonts.ready:Promise.resolve()).then(function(){
+    document.body.style.opacity='1';
+  });
+}
+
+function setDots(active){
+  for(var i=0;i<3;i++){
+    var d=document.getElementById('dot'+i);
+    d.className='dot'+(i<active?' done':i===active?' active':'');
+  }
+}
+
+async function checkWallet(){
+  var w=document.getElementById('walletInput').value.trim();
+  var err=document.getElementById('step1Err');
+  var btn=document.getElementById('checkBtn');
+  document.getElementById('walletInput').classList.remove('err');
+  err.style.display='none';
+
+  if(!/^0x[a-fA-F0-9]{40}$/.test(w)){
+    document.getElementById('walletInput').classList.add('err');
+    err.textContent='enter a valid wallet address'; err.style.display='block'; return;
+  }
+
+  btn.disabled=true; btn.textContent='checking...';
+
+  try{
+    // check if already GTD
+    var gtd=await sbGet('masterlist','wallet=ilike.'+encodeURIComponent(w)+'&select=id');
+    if(gtd&&gtd.length){
+      err.textContent='ur already GTD goblin \uD83E\uDDCC'; err.style.color='#4ade80'; err.style.display='block';
+      btn.disabled=false; btn.textContent='check eligibility'; return;
+    }
+
+    // check goblist
+    var gob=await sbGet('goblist','wallet=ilike.'+encodeURIComponent(w)+'&select=id,twitter');
+    if(!gob||!gob.length){
+      err.textContent='wallet not on goblist — play the game first at gobinos.wtf/game';
+      err.style.color='var(--blood)'; err.style.display='block';
+      btn.disabled=false; btn.textContent='check eligibility'; return;
+    }
+
+    currentWallet=w.toLowerCase();
+    currentTwitter=(gob[0].twitter||'');
+    btn.disabled=false; btn.textContent='check eligibility';
+    goStep(2);
+  }catch(e){
+    err.textContent='something broke, try again'; err.style.color='var(--blood)'; err.style.display='block';
+    btn.disabled=false; btn.textContent='check eligibility';
+  }
+}
+
+function goStep(n){
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+  var el=document.getElementById('step'+n);
+  if(el) el.classList.add('active');
+  setDots(n-1);
+}
+
+function goBack(){ goStep(1); }
+
+function openTweet(){
+  var text=document.getElementById('tweetBox').innerText.replace(/^copy\s*/,'').trim();
+  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+}
+
+function copyTweet(){
+  var text=document.getElementById('tweetBox').innerText.replace(/^copy\s*/,'').trim();
+  navigator.clipboard&&navigator.clipboard.writeText(text);
+  var btn=document.querySelector('.tweet-copy-btn'); btn.textContent='copied!';
+  setTimeout(function(){ btn.textContent='copy'; },1500);
+}
+
+async function submitUpgrade(){
+  var link=document.getElementById('tweetLink').value.trim();
+  var err=document.getElementById('step2Err');
+  var btn=document.getElementById('submitBtn');
+  document.getElementById('tweetLink').classList.remove('err');
+  err.style.display='none';
+
+  if(!link||!/https?:\/\/(x\.com|twitter\.com)\//.test(link)){
+    document.getElementById('tweetLink').classList.add('err');
+    err.textContent='paste a valid x.com tweet link'; err.style.color='var(--blood)'; err.style.display='block'; return;
+  }
+
+  btn.disabled=true; btn.textContent='locking in spot...';
+
+  try{
+    // check cap still open — count masterlist
+    var cnt=await fetch(SB+'/masterlist?select=id',{headers:Object.assign(sbH(),{'Prefer':'count=exact','Range':'0-0'})});
+    // write to masterlist
+    await sbPost('masterlist',{wallet:currentWallet,twitter:currentTwitter,upgrade_tweet:link},'return=minimal,resolution=merge-duplicates');
+    // write tweet proof to upgrade_log if exists (silent fail ok)
+    try{ await sbPost('upgrade_log',{wallet:currentWallet,twitter:currentTwitter,tweet_link:link},'return=minimal'); }catch(e){}
+
+    // show success
+    document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+    document.getElementById('successState').style.display='block';
+    setDots(3);
+  }catch(e){
+    err.textContent='something broke, try again'; err.style.color='var(--blood)'; err.style.display='block';
+    btn.disabled=false; btn.textContent='claim GTD spot';
+  }
+}
+
+// ambient particles
+(function(){
+  var c=document.getElementById('bgCanvas');
+  var ctx=c.getContext('2d');
+  var W,H,pts=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  for(var i=0;i<22;i++) pts.push({x:Math.random()*1000,y:Math.random()*1000,vx:(Math.random()-.5)*.16,vy:(Math.random()-.5)*.16,r:Math.random()*1.4+.4,a:Math.random()});
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(function(p){
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      p.a+=.004;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(74,222,128,'+(0.1+Math.sin(p.a)*.07)+')'; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// enter key on wallet input
+document.getElementById('walletInput').addEventListener('keydown',function(e){if(e.key==='Enter') checkWallet();});
+document.getElementById('tweetLink').addEventListener('keydown',function(e){if(e.key==='Enter') submitUpgrade();});
+
+init();
+</script>
+</body>
+</html>
