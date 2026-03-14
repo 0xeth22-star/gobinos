@@ -275,7 +275,7 @@ async function init(){
 
   // check if spots already full
   try{
-    var ml=await sbGet('masterlist','select=id&limit=1&offset='+((window._gtdCap||350)-1));
+    var ml=await sbGet('masterlist','select=id&source=eq.upgrade&limit=1&offset='+((window._gtdCap||350)-1));
     if(ml&&ml.length>=(window._gtdCap||350)){
       document.getElementById('fullState').style.display='block';
       document.getElementById('step1').classList.remove('active');
