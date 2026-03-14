@@ -172,7 +172,7 @@ var _gob = (function(){
 // ── PATCH 1: reads use anon key (RLS enforces SELECT-only after rls-policies.sql)
 // All player writes (score, claim) go through Edge Functions — key never leaves server
 var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
-var SB_KEY='sb_publishable_99t9_rDs4f9MKo3zsOgyWg_peWsjtqU';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
 
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
 var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
@@ -188,7 +188,7 @@ function sbDelete(t,qs){ return fetch(SB+'/'+t+'?'+qs,{method:'DELETE',headers:s
 
 // ── PATCH 3: Edge Function helper — score/claim calls go here, never direct to Supabase
 function fnPost(endpoint,body){
-  var headers={'Content-Type':'application/json'};
+  var headers={'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY};
   if(_sessionToken) headers['x-session-token']=_sessionToken;
   return fetch(FN_BASE+'/'+endpoint,{
     method:'POST',
@@ -654,7 +654,7 @@ async function validateAndStart(){
   try{
     var r=await fetch(FN_BASE+'/issue-session',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
       body:JSON.stringify({wallet:w,twitter:t})
     });
     if(!r.ok) throw new Error('session failed');
