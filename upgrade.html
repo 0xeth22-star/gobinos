@@ -307,9 +307,11 @@ async function checkWallet(){
 
   try{
     // check if already GTD
-    var gtd=await sbGet('masterlist','wallet=ilike.'+encodeURIComponent(w)+'&select=id');
+    var gtd=await sbGet('masterlist','wallet=ilike.'+encodeURIComponent(w)+'&source=eq.upgrade&select=id');
     if(gtd&&gtd.length){
-      err.textContent='ur already GTD goblin \uD83E\uDDCC'; err.style.color='#4ade80'; err.style.display='block';
+      document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+      document.getElementById('successState').style.display='block';
+      document.getElementById('progressDots').style.display='none';
       btn.disabled=false; btn.textContent='check eligibility'; return;
     }
 
