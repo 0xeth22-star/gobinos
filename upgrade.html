@@ -220,7 +220,7 @@ THE GOBINOS IS COMING 🧌</div>
       <input class="inp" id="tweetLink" placeholder="https://x.com/..." autocomplete="off" spellcheck="false">
       <div class="err-msg" id="step2Err"></div>
       <button class="btn" id="submitBtn" onclick="submitUpgrade()">claim GTD spot</button>
-      <button class="btn ghost" onclick="goBack()" style="margin-top:6px;">← back</button>
+      <button class="btn ghost" onclick="goBack()" style="margin-top:6px;">back</button>
     </div>
 
     <!-- SUCCESS -->
@@ -293,10 +293,10 @@ async function checkWallet(){
 
   if(!/^0x[a-fA-F0-9]{40}$/.test(w)){
     document.getElementById('walletInput').classList.add('err');
-    err.textContent='enter a valid wallet address'; err.style.display='block'; return;
+    err.textContent='not a wallet'; err.style.display='block'; return;
   }
 
-  btn.disabled=true; btn.textContent='checking...';
+  btn.disabled=true; btn.textContent='checking';
 
   try{
     // check if already GTD
@@ -309,7 +309,7 @@ async function checkWallet(){
     // check goblist
     var gob=await sbGet('goblist','wallet=ilike.'+encodeURIComponent(w)+'&select=id,twitter');
     if(!gob||!gob.length){
-      err.textContent='wallet not on goblist — play the game first at gobinos.wtf/game';
+      err.textContent='wallet not on goblist';
       err.style.color='var(--blood)'; err.style.display='block';
       btn.disabled=false; btn.textContent='check eligibility'; return;
     }
@@ -319,8 +319,7 @@ async function checkWallet(){
     btn.disabled=false; btn.textContent='check eligibility';
     goStep(2);
   }catch(e){
-    err.textContent='something broke, try again'; err.style.color='var(--blood)'; err.style.display='block';
-    btn.disabled=false; btn.textContent='check eligibility';
+    err.textContent='something went wrong'; err.style.color='var(--blood)'; err.style.display='block';
   }
 }
 
@@ -354,32 +353,38 @@ async function submitUpgrade(){
 
   if(!link||!/https?:\/\/(x\.com|twitter\.com)\//.test(link)){
     document.getElementById('tweetLink').classList.add('err');
-    err.textContent='paste a valid x.com tweet link'; err.style.color='var(--blood)'; err.style.display='block'; return;
+    err.textContent='drop the tweet link'; err.style.color='var(--blood)'; err.style.display='block'; return;
   }
 
-  btn.disabled=true; btn.textContent='locking in spot...';
+  btn.disabled=true; btn.textContent='locking in';
 
   try{
-    // check cap still open
-    var cntResp=await fetch(SB+'/masterlist?select=id',{headers:Object.assign(sbH(),{'Prefer':'count=exact','Range':'0-0'})});
-    var cntTotal=parseInt(cntResp.headers.get('content-range')||'0/0').toString().split('/')[1]||0;
-    if(parseInt(cntTotal)>=(window._gtdCap||350)){
+    var r=await fetch('https://wlqgibttbggikhdfporr.supabase.co/functions/v1/upgrade-claim',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet:currentWallet,twitter:currentTwitter,tweet_link:link})
+    });
+    var data=await r.json();
+
+    if(r.status===409){
       document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
       document.getElementById('fullState').style.display='block';
       document.getElementById('progressDots').style.display='none';
       return;
     }
-    // write to masterlist
-    await sbPost('masterlist',{wallet:currentWallet,twitter:currentTwitter,upgrade_tweet:link},'return=minimal,resolution=merge-duplicates');
-    // write tweet proof to upgrade_log if exists (silent fail ok)
-    try{ await sbPost('upgrade_log',{wallet:currentWallet,twitter:currentTwitter,tweet_link:link},'return=minimal'); }catch(e){}
+    if(!data.ok){
+      err.textContent=data.error||'something went wrong';
+      err.style.color='var(--blood)'; err.style.display='block';
+      btn.disabled=false; btn.textContent='claim GTD spot';
+      return;
+    }
 
     // show success
     document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
     document.getElementById('successState').style.display='block';
     setDots(3);
   }catch(e){
-    err.textContent='something broke, try again'; err.style.color='var(--blood)'; err.style.display='block';
+    err.textContent='something went wrong'; err.style.color='var(--blood)'; err.style.display='block';
     btn.disabled=false; btn.textContent='claim GTD spot';
   }
 }
