@@ -369,7 +369,7 @@ async function submitUpgrade(){
   try{
     var r=await fetch('https://wlqgibttbggikhdfporr.supabase.co/functions/v1/upgrade-claim',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
       body:JSON.stringify({wallet:currentWallet,twitter:currentTwitter,tweet_link:link})
     });
     var data=await r.json();
