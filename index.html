@@ -294,7 +294,13 @@ canvas#bgCanvas{
   <div class="title" id="gobTitle">GOBINOS</div>
   <div class="tagline">goblins only · no rules</div>
 
-  <a href="/game" class="enter-btn" id="enterBtn" style="display:none">enter the trenches</a>
+  <div id="enterBtn" style="display:none;margin-bottom:4px;">
+    <div style="pointer-events:none;display:inline-block;padding:14px 32px;background:rgba(20,50,20,0.5);border:1px solid rgba(74,222,128,0.2);border-radius:4px;text-align:center;cursor:default;">
+      <div style="font-family:'Creepster',cursive;font-size:1.05rem;letter-spacing:4px;color:rgba(74,222,128,0.4);text-transform:uppercase;">enter the trenches</div>
+      <div style="font-family:'Space Mono',monospace;font-size:.36rem;color:rgba(74,222,128,0.25);letter-spacing:4px;text-transform:uppercase;margin-top:5px;">holders only</div>
+    </div>
+  </div>
+  <div id="holdersTag" style="display:none;"></div>
   <a href="/upgrade" id="upgradeBtn" style="display:none;margin-top:14px;font-family:'Creepster',cursive;font-size:1.05rem;letter-spacing:4px;color:var(--bright);text-transform:uppercase;text-decoration:none;background:rgba(30,74,30,0.65);border:1px solid rgba(74,222,128,.4);padding:14px 32px;border-radius:4px;font-weight:700;">goblist upgrade</a>
 
   <div id="teaserBlock" style="display:flex;flex-direction:column;align-items:center;gap:0;">
@@ -412,7 +418,8 @@ async function init(){
 }
 
 function applyGame(){
-  document.getElementById('enterBtn').style.display=gameOn?'inline-block':'none';
+  document.getElementById('enterBtn').style.display=gameOn?'block':'none';
+  document.getElementById('holdersTag').style.display=gameOn?'block':'none';
   document.getElementById('upgradeBtn').style.display=upgradeOn?'inline-block':'none';
   document.getElementById('teaserBlock').style.display=(gameOn||upgradeOn)?'none':'flex';
   var b=document.getElementById('gameToggleBtn');
