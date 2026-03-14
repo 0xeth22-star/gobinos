@@ -325,6 +325,17 @@ async function checkWallet(){
 
     currentWallet=w.toLowerCase();
     currentTwitter=(gob[0].twitter||'');
+
+    // issue session token
+    var sessResp=await fetch('https://wlqgibttbggikhdfporr.supabase.co/functions/v1/issue-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({wallet:currentWallet})
+    });
+    var sessData=await sessResp.json();
+    if(!sessData.token){ throw new Error('session issue failed'); }
+    window._upgradeToken=sessData.token;
+
     btn.disabled=false; btn.textContent='check eligibility';
     goStep(2);
   }catch(e){
@@ -371,7 +382,7 @@ async function submitUpgrade(){
   try{
     var r=await fetch('https://wlqgibttbggikhdfporr.supabase.co/functions/v1/upgrade-claim',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-session-token':window._upgradeToken||''},
       body:JSON.stringify({wallet:currentWallet,twitter:currentTwitter,tweet_link:link})
     });
     var data=await r.json();
