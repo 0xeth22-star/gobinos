@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upgrade · Gobinos</title>
+<title>upgrade</title>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -205,7 +205,7 @@ canvas#bgCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:non
     <div class="step" id="step2">
       <div class="step-label">step 2 of 3</div>
       <div class="step-title">post your upgrade</div>
-      <div class="step-sub">post this tweet then paste the link below</div>
+      <div class="step-sub">post this tweet to continue</div>
       <div class="tweet-box" id="tweetBox">
         <button class="tweet-copy-btn" onclick="copyTweet()">copy</button>
 I just upgraded my goblist spot to GTD via @gobinosoneth
@@ -216,11 +216,18 @@ Mint link : https://opensea.io/collection/gobinosoneth/overview
 
 THE GOBINOS IS COMING 🧌</div>
       <button class="btn" id="tweetBtn" onclick="openTweet()" style="margin-bottom:16px;">post on 𝕏</button>
-      <div class="step-sub" style="margin-bottom:8px;">paste your tweet link</div>
+      <button class="btn ghost" onclick="goBack()" style="margin-top:6px;">back</button>
+    </div>
+
+    <!-- STEP 3: claim -->
+    <div class="step" id="step3">
+      <div class="step-label">step 3 of 3</div>
+      <div class="step-title">claim your spot</div>
+      <div class="step-sub">paste your tweet link below</div>
       <input class="inp" id="tweetLink" placeholder="https://x.com/..." autocomplete="off" spellcheck="false">
       <div class="err-msg" id="step2Err"></div>
       <button class="btn" id="submitBtn" onclick="submitUpgrade()">claim GTD spot</button>
-      <button class="btn ghost" onclick="goBack()" style="margin-top:6px;">back</button>
+      <button class="btn ghost" onclick="goStep(2)" style="margin-top:6px;">back</button>
     </div>
 
     <!-- SUCCESS -->
@@ -335,6 +342,7 @@ function goBack(){ goStep(1); }
 function openTweet(){
   var text=document.getElementById('tweetBox').innerText.replace(/^copy\s*/,'').trim();
   window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
+  goStep(3);
 }
 
 function copyTweet(){
