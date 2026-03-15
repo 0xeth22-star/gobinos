@@ -1,4 +1,8 @@
-
+/**
+ * wallet-gate.js
+ * Gobinos NFT holder gate — vanilla JS, ethers v6 UMD
+ * Loads AFTER _gob is defined. Calls _gob._setWalletAuth() on success.
+ */
 var GOBINOS_GATE = (function () {
 
   var CONTRACT = '0x5f4a162f85e0a958faaef579ca220143607a5b64';
@@ -11,7 +15,7 @@ var GOBINOS_GATE = (function () {
 
   // ── UI state machine ───────────────────────────────────────────────────────
   function showState(id) {
-    ['wgLoading', 'wgConnect', 'wgWrongNet', 'wgNotHolder'].forEach(function (s) {
+    ['wgLoading', 'wgConnect', 'wgWrongNet', 'wgNotHolder', 'wgPreMint'].forEach(function (s) {
       document.getElementById(s).style.display = s === id ? 'block' : 'none';
     });
     document.getElementById('walletGate').style.display = 'flex';
@@ -31,6 +35,26 @@ var GOBINOS_GATE = (function () {
     }
 
     showState('wgLoading');
+
+    // ── GateOpen check — connect button locked until mint is done ────────────
+    // Set GateOpen = 1 in Supabase config table to open the gate after mint.
+    try {
+      var cfgRes = await fetch(
+        'https://wlqgibttbggikhdfporr.supabase.co/rest/v1/config?name=eq.GateOpen&select=value',
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+      );
+      var cfgData = await cfgRes.json();
+      var gateOpen = cfgData && cfgData[0] && cfgData[0].value === '1';
+      if (!gateOpen) {
+        showState('wgPreMint');
+        return; // stop init — no connect button, no wallet check
+      }
+    } catch (e) {
+      // If config fetch fails, fail closed — keep gate locked
+      console.error('[gate] GateOpen config fetch failed:', e.message);
+      showState('wgPreMint');
+      return;
+    }
 
     document.getElementById('wgConnectBtn').addEventListener('click', connect);
     document.getElementById('wgDisconnectBtn').addEventListener('click', disconnect);
