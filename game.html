@@ -767,6 +767,8 @@ function resetToNewGoblin(){
   playerWallet=''; playerHandle=''; hasPlayed=false; _sessionToken='';
   document.getElementById('startWallet').value=''; document.getElementById('startTwitter').value='';
   document.getElementById('returningCard').style.display='none'; document.getElementById('newGoblinCard').style.display='block';
+  // Issue 7 fix: sync wallet-gate state so silent reconnect doesn't re-load old wallet
+  if(typeof GOBINOS_GATE !== 'undefined') GOBINOS_GATE.disconnect();
 }
 
 function startGame(){
@@ -923,12 +925,20 @@ async function takeSnapshot(){
 async function saveAdminCap(){
   if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminCap').value)||500; GTD_CAP=v;
-  try{ await sbPatch('config','name=eq.GtdCap',{value:String(v)}); document.getElementById('adminScreen').style.display='none'; alert('saved! gtd cap = '+v); }catch(e){ alert('failed to save'); }
+  try{
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({key:'GtdCap',value:String(v)})});
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    document.getElementById('adminScreen').style.display='none'; alert('saved! gtd cap = '+v);
+  }catch(e){ alert('failed to save: '+e.message); }
 }
 async function saveAdminScore(){
   if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminScore').value)||500; WIN_SCORE=v;
-  try{ await sbPatch('config','name=eq.WinScore',{value:String(v)}); document.getElementById('adminScreen').style.display='none'; alert('saved! win score = '+v); }catch(e){ alert('failed to save'); }
+  try{
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({key:'WinScore',value:String(v)})});
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    document.getElementById('adminScreen').style.display='none'; alert('saved! win score = '+v);
+  }catch(e){ alert('failed to save: '+e.message); }
 }
 
 function openAdmin(){ document.getElementById('adminLoginScreen').style.display='flex'; document.getElementById('adminPass').value=''; document.getElementById('adminPassErr').style.display='none'; }
@@ -984,20 +994,24 @@ async function importWallets(){
   var wallets=raw.split(/[\n,]+/).map(function(w){return w.trim();}).filter(function(w){return /^0x[a-fA-F0-9]{40}$/.test(w);});
   if(!wallets.length){ status.textContent='no valid wallets found'; status.style.display='block'; return; }
   status.textContent='importing '+wallets.length+' wallets...'; status.style.display='block';
-  var ok=0;
-  for(var i=0;i<wallets.length;i++){
-    try{ await sbPost('allowlist',{twitter:handle,wallet:wallets[i],score:0},'return=minimal'); await sbPost('masterlist',{twitter:handle,wallet:wallets[i]},'return=minimal'); ok++; }catch(e){}
-    if(i%10===0) status.textContent='importing... '+ok+'/'+wallets.length;
-  }
-  status.textContent='done! '+ok+' wallets imported'; document.getElementById('importData').value='';
+  try{
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({wallets:wallets,handle:handle,table:'masterlist'})});
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    var d=await r.json();
+    status.textContent='done! '+d.ok+'/'+d.total+' wallets imported to masterlist';
+    document.getElementById('importData').value='';
+  }catch(e){ status.textContent='failed: '+e.message; }
 }
 
 async function clearLeaderboard(){
   if(!_adminToken){ alert('not authorised'); return; }
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus'); status.textContent='wiping...'; status.style.display='block';
-  // ── PATCH 15: use score=gte.0 — safe for both integer and UUID primary keys
-  try{ await sbDelete('leaderboard','score=gte.0'); status.textContent='leaderboard wiped'; }catch(e){ status.textContent='failed'; }
+  try{
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({target:'leaderboard'})});
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    status.textContent='leaderboard wiped';
+  }catch(e){ status.textContent='failed: '+e.message; }
 }
 
 async function runSnapshot(){
@@ -1023,39 +1037,12 @@ async function runSnapshot(){
     var snapId='snap_'+new Date().toISOString().slice(0,10).replace(/-/g,'');
     var gtdOk=0, gobOk=0;
 
-    // ── write top 100 → masterlist (GTD)
-    status.textContent='writing '+top100.length+' to masterlist (GTD)...';
-    for(var i=0;i<top100.length;i++){
-      try{
-        await fetch(SB+'/masterlist?on_conflict=wallet',{
-          method:'POST',
-          headers:Object.assign(sbH(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
-          body:JSON.stringify({twitter:top100[i].twitter,wallet:top100[i].wallet.toLowerCase(),score:top100[i].score})
-        });
-        gtdOk++;
-      }catch(e){}
-      if(i%10===0) status.textContent='GTD: '+gtdOk+'/'+(i+1)+'...';
-    }
-
-    // ── write rest → goblist (goblist)
-    status.textContent='writing '+rest.length+' to goblist...';
-    for(var i=0;i<rest.length;i++){
-      try{
-        await fetch(SB+'/goblist?on_conflict=wallet',{
-          method:'POST',
-          headers:Object.assign(sbH(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
-          body:JSON.stringify({twitter:rest[i].twitter,wallet:rest[i].wallet.toLowerCase(),score:rest[i].score})
-        });
-        gobOk++;
-      }catch(e){}
-      if(i%10===0) status.textContent='goblist: '+gobOk+'/'+(i+1)+'...';
-    }
-
-    // ── tweet copy
-    var lines=top100.slice(0,10).map(function(p,i){ return (i+1)+'. '+(p.twitter||'anon')+' — '+p.score+' kills'; });
-    var tweetText='gobinos snapshot · '+snapId+'\n\ntop goblins locked in\n\n'+lines.join('\n')+'\n\n...and '+(top100.length-10)+' more GTD\n\n'+rest.length+' on the goblist\n\ngobinos.wtf\n@gobinosoneth';
-    tweet.value=tweetText; tweet.style.display='block';
-    status.textContent='done · '+gtdOk+' GTD · '+gobOk+' goblist · '+deduped.length+' total · '+snapId;
+    // Route snapshot writes through admin-snapshot Edge Function (service role key server-side)
+    var snapRes=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken}});
+    if(!snapRes.ok) throw new Error((await snapRes.json()).error||snapRes.status);
+    var snapData=await snapRes.json();
+    tweet.value=snapData.tweetText; tweet.style.display='block';
+    status.textContent='done · '+snapData.gtdOk+' GTD · '+snapData.gobOk+' goblist · '+snapData.total+' total · '+snapData.snapId;
   }catch(e){ status.textContent='failed: '+e.message; }
 }
 
@@ -1063,8 +1050,11 @@ async function clearPhase(){
   if(!_adminToken){ alert('not authorised'); return; }
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus'); status.textContent='clearing...'; status.style.display='block';
-  // ── PATCH 16: same fix as clearLeaderboard — score=gte.0 safe for any PK type
-  try{ await sbDelete('allowlist','score=gte.0'); status.textContent='cleared!'; }catch(e){ status.textContent='failed'; }
+  try{
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({target:'allowlist'})});
+    if(!r.ok) throw new Error((await r.json()).error||r.status);
+    status.textContent='cleared!';
+  }catch(e){ status.textContent='failed: '+e.message; }
 }
 
 function checkWallet(){
@@ -1134,11 +1124,14 @@ return {
 // wallet-gate.js calls window.__gobSetAuth(wallet, token) exactly once.
 // The bridge self-destructs after first use — no permanent public handle on
 // _setWalletAuth, nothing callable mid-session by extensions or XSS payloads.
+// Non-destructing bridge — token is the security primitive, not bridge deletion.
+// _setWalletAuth is NOT on _gob's return object, so this is the only call path.
+// wallet-gate.js calls this after every successful verify (focus, wallet switch, init).
 window.__gobSetAuth = function(w, t) {
   if (typeof w !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(w)) return;
   if (typeof t !== 'string' || t.length < 20) return;
   _setWalletAuth(w, t);
-  delete window.__gobSetAuth; // self-destruct — one use only
+  // No self-destruct — re-verification (tab focus, wallet switch) must work
 };
 
 })();
