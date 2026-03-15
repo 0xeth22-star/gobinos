@@ -243,12 +243,48 @@ var GOBINOS_GATE = (function () {
 
   init();
 
-  // Fix 7: refreshToken — re-verify and get a fresh session token for "keep grinding"
-  // Re-runs the full verify flow (balanceOf + sign + issue-session) without any UI disruption.
-  // Called by game.html keepGrinding() before starting the next game session.
+  // Fix 6: refreshToken — get a fresh session token for "keep grinding" with NO MetaMask prompt.
+  // Sends the existing valid token to refresh-session, which re-verifies NFT balance server-side
+  // and issues a new JWT with a fresh nonce. No wallet signature required.
   async function refreshToken() {
-    if (!_wallet || !_provider) return;
-    await verifyHolder(_wallet);
+    if (!_wallet) return;
+    var currentToken = null;
+    try {
+      // Read current session token from game via the bridge context
+      // We need the current token — stored in _gob's _sessionToken
+      // Access it via a temporary read bridge if available
+      currentToken = window.__gobGetToken ? window.__gobGetToken() : null;
+    } catch(e) {}
+
+    if (!currentToken) {
+      // Fallback: no current token, do full re-verify (will prompt MetaMask)
+      if (_provider) await verifyHolder(_wallet);
+      return;
+    }
+
+    try {
+      var r = await fetch(FN_BASE + '/refresh-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type':    'application/json',
+          'Authorization':   'Bearer ' + SB_KEY,
+          'x-session-token': currentToken
+        },
+        body: JSON.stringify({})
+      });
+      if (!r.ok) {
+        // Token expired or NFT no longer held — fall back to full re-verify
+        if (_provider) await verifyHolder(_wallet);
+        return;
+      }
+      var d = await r.json();
+      if (d.token && typeof window.__gobSetAuth === 'function') {
+        window.__gobSetAuth(_wallet.toLowerCase(), d.token);
+      }
+    } catch(e) {
+      console.error('[gate] refreshToken failed:', e.message);
+      if (_provider) await verifyHolder(_wallet);
+    }
   }
 
   return { disconnect: disconnect, refreshToken: refreshToken };
