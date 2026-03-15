@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Web3: ethers v6 UMD — required by wallet-gate.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;color:#e8dcc8;}
@@ -31,7 +33,47 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 <div id="wrap">
   <canvas id="gameCanvas"></canvas>
 
-  <div class="overlay" id="startScreen">
+  <!-- ── WALLET GATE (z-index 60 — sits above all game overlays at z-index 50) ── -->
+  <div class="overlay" id="walletGate" style="z-index:60;">
+
+    <!-- STATE 1: loading / checking chain -->
+    <div class="card" id="wgLoading">
+      <div style="font-size:2.8rem;animation:gobBob 1s ease-in-out infinite;">🧌</div>
+      <div class="o-sub" style="margin-top:14px;letter-spacing:3px;">entering the swamp...</div>
+    </div>
+
+    <!-- STATE 2: wallet not connected -->
+    <div class="card" id="wgConnect" style="display:none;">
+      <div style="font-size:2.8rem;margin-bottom:12px;">🧌</div>
+      <div class="o-title">GOBINOS</div>
+      <div class="o-sub">holders only · no rules</div>
+      <button class="o-btn" id="wgConnectBtn" style="letter-spacing:4px;">connect wallet</button>
+    </div>
+
+    <!-- STATE 3: connected but wrong network -->
+    <div class="card" id="wgWrongNet" style="display:none;">
+      <div style="font-size:2rem;margin-bottom:10px;">⛓️</div>
+      <div class="o-title" style="color:#cc2200;font-size:1.4rem;">wrong network</div>
+      <div class="o-sub">switch to ethereum mainnet to enter the swamp</div>
+      <button class="o-btn" id="wgSwitchBtn">switch to mainnet</button>
+    </div>
+
+    <!-- STATE 4: connected but not a holder -->
+    <div class="card" id="wgNotHolder" style="display:none;">
+      <div style="font-size:2.8rem;margin-bottom:12px;">🧌</div>
+      <div class="o-title" style="color:#cc2200;">holders only</div>
+      <div class="o-sub">you need a gobino to enter the swamp</div>
+      <button class="o-btn"
+        onclick="window.open('https://opensea.io/collection/gobinosoneth','_blank')"
+        style="letter-spacing:3px;">get a gobino</button>
+      <button class="o-btn" id="wgDisconnectBtn"
+        style="background:transparent;border-color:rgba(107,143,62,0.2);font-size:.65rem;padding:9px;margin-top:4px;color:rgba(232,220,200,0.3);letter-spacing:2px;">
+        disconnect
+      </button>
+    </div>
+
+  </div>
+  <!-- ── END WALLET GATE ── -->
     <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'Space Mono',monospace;font-size:.36rem;color:rgba(74,222,128,0.3);letter-spacing:4px;text-transform:uppercase;border:1px solid rgba(74,222,128,0.12);padding:5px 14px;border-radius:2px;">holders only</div>
     <div class="card" id="newGoblinCard">
       <div class="o-title">GOBINOS</div>
@@ -640,7 +682,40 @@ function togglePause(){ if(!gameRunning&&!gamePaused) return; if(gamePaused) res
 function pauseGame(){ gamePaused=true; gameRunning=false; stopAutoShoot(); document.getElementById('pauseScore').textContent=score+' kills so far'; document.getElementById('pauseScreen').style.display='flex'; document.getElementById('pauseBtn').textContent='▶'; }
 function resumeGame(){ document.getElementById('pauseScreen').style.display='none'; gamePaused=false; gameRunning=true; document.getElementById('pauseBtn').textContent='II'; lastTime=performance.now(); requestAnimationFrame(gameLoop); }
 
+// ── WALLET GATE HANDOFF ───────────────────────────────────────────────────────
+// Called by wallet-gate.js after on-chain balanceOf + message signing.
+// Sets session token and wallet, then prepares the correct start card.
+function _setWalletAuth(wallet, sessionToken){
+  playerWallet    = wallet;
+  _sessionToken   = sessionToken;
+  _sessionStartMs = Date.now();
+
+  // Always pre-fill the wallet input (it stays in DOM even when hidden)
+  document.getElementById('startWallet').value = wallet;
+
+  // Restore saved twitter handle if returning player
+  var savedHandle = '';
+  try { savedHandle = localStorage.getItem('gobHandle') || ''; } catch(e){}
+
+  if(savedHandle){
+    // Returning player — show their card
+    playerHandle = savedHandle;
+    hasPlayed = true;
+    document.getElementById('startTwitter').value = savedHandle;
+    document.getElementById('returningHandle').textContent = escHtml(savedHandle);
+    document.getElementById('returningWallet').textContent = wallet.slice(0,6)+'...'+wallet.slice(-4);
+    document.getElementById('newGoblinCard').style.display = 'none';
+    document.getElementById('returningCard').style.display = 'block';
+  } else {
+    // New player — wallet pre-filled, clear handle input
+    document.getElementById('startTwitter').value = '';
+    document.getElementById('returningCard').style.display = 'none';
+    document.getElementById('newGoblinCard').style.display = 'block';
+  }
+}
+
 // ── PATCH 11: validateAndStart is now async — fetches session token before game starts
+// ── WALLET GATE: if _sessionToken already set by wallet-gate.js, skip the fetch ──
 async function validateAndStart(){
   var w=document.getElementById('startWallet').value.trim();
   var t=document.getElementById('startTwitter').value.trim();
@@ -654,21 +729,23 @@ async function validateAndStart(){
   t=tClean;
   playerWallet=w.toLowerCase(); playerHandle=t;
   try{ localStorage.setItem('gobWallet',w.toLowerCase()); localStorage.setItem('gobHandle',t); }catch(e){}
-  // Get session token — binds this wallet to a signed server timestamp
-  try{
-    var r=await fetch(FN_BASE+'/issue-session',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({wallet:w,twitter:t})
-    });
-    if(!r.ok) throw new Error('session failed');
-    var d=await r.json();
-    _sessionToken=d.token;
-    _sessionStartMs=Date.now();
-  }catch(e){
-    err.textContent='connection error — try again';
-    err.style.display='block';
-    return;
+  // Wallet gate already issued the session token — skip fetch
+  if(!_sessionToken){
+    try{
+      var r=await fetch(FN_BASE+'/issue-session',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+        body:JSON.stringify({wallet:w,twitter:t})
+      });
+      if(!r.ok) throw new Error('session failed');
+      var d=await r.json();
+      _sessionToken=d.token;
+      _sessionStartMs=Date.now();
+    }catch(e){
+      err.textContent='connection error — try again';
+      err.style.display='block';
+      return;
+    }
   }
   startGame();
 }
@@ -1052,10 +1129,13 @@ return {
   checkAdminPass:checkAdminPass, saveAdminScore:saveAdminScore, saveAdminCap:saveAdminCap,
   exportWallets:exportWallets, importWallets:importWallets, clearLeaderboard:clearLeaderboard,
   clearPhase:clearPhase, checkWallet:checkWallet, runSnapshot:runSnapshot,
-  setLbTab:setLbTab, takeSnapshot:takeSnapshot
+  setLbTab:setLbTab, takeSnapshot:takeSnapshot,
+  _setWalletAuth:_setWalletAuth  // ← called by wallet-gate.js after NFT verification
 };
 
 })();
 </script>
+<!-- wallet-gate.js loads AFTER _gob is defined — order is critical -->
+<script src="wallet-gate.js"></script>
 </body>
 </html>
