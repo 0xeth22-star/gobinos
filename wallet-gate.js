@@ -180,7 +180,9 @@ var GOBINOS_GATE = (function () {
         body: JSON.stringify({
           wallet:    wallet.toLowerCase(),
           signature: sig,
-          nonce:     nonce
+          nonce:     nonce,
+          // Fix 1B: pass saved handle so JWT twitter field is populated for score submission
+          twitter:   (function(){ try { return localStorage.getItem('gobHandle') || ''; } catch(e) { return ''; } })()
         })
       });
 
@@ -241,6 +243,14 @@ var GOBINOS_GATE = (function () {
 
   init();
 
-  return { disconnect: disconnect };
+  // Fix 7: refreshToken — re-verify and get a fresh session token for "keep grinding"
+  // Re-runs the full verify flow (balanceOf + sign + issue-session) without any UI disruption.
+  // Called by game.html keepGrinding() before starting the next game session.
+  async function refreshToken() {
+    if (!_wallet || !_provider) return;
+    await verifyHolder(_wallet);
+  }
+
+  return { disconnect: disconnect, refreshToken: refreshToken };
 
 })();
