@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <!-- Web3: ethers v6 UMD — required by wallet-gate.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script src="ethers.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;color:#e8dcc8;}
@@ -729,23 +729,12 @@ async function validateAndStart(){
   t=tClean;
   playerWallet=w.toLowerCase(); playerHandle=t;
   try{ localStorage.setItem('gobWallet',w.toLowerCase()); localStorage.setItem('gobHandle',t); }catch(e){}
-  // Wallet gate already issued the session token — skip fetch
+  // v4 issue-session requires a signed message — only wallet-gate.js can issue tokens.
+  // If no token here, the gate wasn't completed — send user back.
   if(!_sessionToken){
-    try{
-      var r=await fetch(FN_BASE+'/issue-session',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
-        body:JSON.stringify({wallet:w,twitter:t})
-      });
-      if(!r.ok) throw new Error('session failed');
-      var d=await r.json();
-      _sessionToken=d.token;
-      _sessionStartMs=Date.now();
-    }catch(e){
-      err.textContent='connection error — try again';
-      err.style.display='block';
-      return;
-    }
+    err.textContent='wallet not verified — refresh and reconnect';
+    err.style.display='block';
+    return;
   }
   startGame();
 }
