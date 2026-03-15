@@ -931,7 +931,7 @@ async function saveAdminCap(){
   if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminCap').value)||500; GTD_CAP=v;
   try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({key:'GtdCap',value:String(v)})});
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'config',key:'GtdCap',value:String(v)})});
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     document.getElementById('adminScreen').style.display='none'; alert('saved! gtd cap = '+v);
   }catch(e){ alert('failed to save: '+e.message); }
@@ -940,7 +940,7 @@ async function saveAdminScore(){
   if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminScore').value)||500; WIN_SCORE=v;
   try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({key:'WinScore',value:String(v)})});
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'config',key:'WinScore',value:String(v)})});
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     document.getElementById('adminScreen').style.display='none'; alert('saved! win score = '+v);
   }catch(e){ alert('failed to save: '+e.message); }
@@ -1000,7 +1000,7 @@ async function importWallets(){
   if(!wallets.length){ status.textContent='no valid wallets found'; status.style.display='block'; return; }
   status.textContent='importing '+wallets.length+' wallets...'; status.style.display='block';
   try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({wallets:wallets,handle:handle,table:'masterlist'})});
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'import',wallets:wallets,handle:handle,table:'masterlist'})});
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     var d=await r.json();
     status.textContent='done! '+d.ok+'/'+d.total+' wallets imported to masterlist';
@@ -1013,7 +1013,7 @@ async function clearLeaderboard(){
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus'); status.textContent='wiping...'; status.style.display='block';
   try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({target:'leaderboard'})});
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'clear',target:'leaderboard'})});
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     status.textContent='leaderboard wiped';
   }catch(e){ status.textContent='failed: '+e.message; }
@@ -1043,7 +1043,7 @@ async function runSnapshot(){
     var gtdOk=0, gobOk=0;
 
     // Route snapshot writes through admin-snapshot Edge Function (service role key server-side)
-    var snapRes=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken}});
+    var snapRes=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'snapshot'})});
     if(!snapRes.ok) throw new Error((await snapRes.json()).error||snapRes.status);
     var snapData=await snapRes.json();
     tweet.value=snapData.tweetText; tweet.style.display='block';
@@ -1056,7 +1056,7 @@ async function clearPhase(){
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus'); status.textContent='clearing...'; status.style.display='block';
   try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({target:'allowlist'})});
+    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'clear',target:'allowlist'})});
     if(!r.ok) throw new Error((await r.json()).error||r.status);
     status.textContent='cleared!';
   }catch(e){ status.textContent='failed: '+e.message; }
@@ -1137,6 +1137,12 @@ window.__gobSetAuth = function(w, t) {
   if (typeof t !== 'string' || t.length < 20) return;
   _setWalletAuth(w, t);
   // No self-destruct — re-verification (tab focus, wallet switch) must work
+};
+
+// Read bridge — allows wallet-gate.js refreshToken() to get the current session token
+// so it can call refresh-session without a new MetaMask signature prompt.
+window.__gobGetToken = function() {
+  return _sessionToken || null;
 };
 
 })();
