@@ -23,6 +23,13 @@ var GOBINOS_GATE = (function () {
 
   // ── Init ───────────────────────────────────────────────────────────────────
   async function init() {
+    // Issue 10 fix: guard against ethers failing to load (CDN block, network error)
+    if (typeof ethers === 'undefined') {
+      console.error('[gate] ethers.js not loaded — check ethers.umd.min.js is in repo root');
+      showState('wgConnect'); // show connect card so user isn't stuck on spinner
+      return;
+    }
+
     showState('wgLoading');
 
     document.getElementById('wgConnectBtn').addEventListener('click', connect);
@@ -162,7 +169,11 @@ var GOBINOS_GATE = (function () {
       if (!d.token) throw new Error('no token returned');
 
       try { localStorage.setItem('gobWallet', wallet); } catch (e) {}
-      _gob._setWalletAuth(wallet.toLowerCase(), d.token);
+      // Use the one-time self-destructing bridge — _setWalletAuth is not on _gob
+      if (typeof window.__gobSetAuth !== 'function') {
+        throw new Error('auth bridge already used or not available — refresh the page');
+      }
+      window.__gobSetAuth(wallet.toLowerCase(), d.token);
       hideGate();
 
     } catch (e) {
