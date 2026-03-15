@@ -176,7 +176,8 @@ var SB='https://wlqgibttbggikhdfporr.supabase.co/rest/v1';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
 
 var FN_BASE='https://wlqgibttbggikhdfporr.supabase.co/functions/v1'; // Edge Function base
-var ADMIN_HASH='46b049f17d9985f990a4b640929e29a565b8c8686a2378b0f88a6a74b30cc168';
+// ADMIN_HASH removed — admin auth via Edge Function
+var _adminToken='';
 
 // ── PATCH 2: session token — issued server-side at game start
 var _sessionToken='', _sessionStartMs=0;
@@ -648,9 +649,11 @@ async function validateAndStart(){
   document.getElementById('startWallet').classList.remove('err');
   document.getElementById('startTwitter').classList.remove('err');
   if(!/^0x[a-fA-F0-9]{40}$/.test(w)){ document.getElementById('startWallet').classList.add('err'); err.textContent='enter a valid wallet'; err.style.display='block'; return; }
-  if(!t){ document.getElementById('startTwitter').classList.add('err'); err.textContent='drop your handle'; err.style.display='block'; return; }
-  playerWallet=w; playerHandle=t;
-  try{ localStorage.setItem('gobWallet',w); localStorage.setItem('gobHandle',t); }catch(e){}
+  var tClean=t.replace(/^@/,'');
+  if(!tClean||!/^[a-zA-Z0-9_]{1,15}$/.test(tClean)){ document.getElementById('startTwitter').classList.add('err'); err.textContent='handle: letters, numbers, _ only (max 15)'; err.style.display='block'; return; }
+  t=tClean;
+  playerWallet=w.toLowerCase(); playerHandle=t;
+  try{ localStorage.setItem('gobWallet',w.toLowerCase()); localStorage.setItem('gobHandle',t); }catch(e){}
   // Get session token — binds this wallet to a signed server timestamp
   try{
     var r=await fetch(FN_BASE+'/issue-session',{
@@ -785,7 +788,9 @@ function showLeaderboard(){
 }
 // ── FIX 1A: deduplicate by wallet — same wallet can have many rows (one per session)
 // rows arrive score DESC so first occurrence per wallet = best score
+var _lbLastFetch=0;
 function loadLbData(){
+  var now=Date.now(); if(now-_lbLastFetch<5000) return; _lbLastFetch=now;
   var list=document.getElementById('lbList');
   list.innerHTML='<div style="font-size:.55rem;color:rgba(74,222,128,.3);text-align:center;padding:20px;">loading...</div>';
   var qs='select=twitter,wallet,score&order=score.desc&limit=2000';
@@ -819,6 +824,7 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 
 // takeSnapshot — original function, untouched
 async function takeSnapshot(){
+  if(!_adminToken){ alert('not authorised'); return; }
   var status=document.getElementById('ogSnapshotStatus');
   var slist=document.getElementById('snapshotList');
   status.textContent='pulling top 50...'; status.style.display='block'; slist.style.display='none';
@@ -849,20 +855,40 @@ async function saveAdminScore(){
   try{ await sbPatch('config','name=eq.WinScore',{value:String(v)}); document.getElementById('adminScreen').style.display='none'; alert('saved! win score = '+v); }catch(e){ alert('failed to save'); }
 }
 
-async function hashStr(s){ var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join(''); }
 function openAdmin(){ document.getElementById('adminLoginScreen').style.display='flex'; document.getElementById('adminPass').value=''; document.getElementById('adminPassErr').style.display='none'; }
+// Issues 1+11: admin auth via Edge Function — bcrypt server-side, per-IP lockout
 async function checkAdminPass(){
-  var h=await hashStr(document.getElementById('adminPass').value);
-  if(h===ADMIN_HASH){ document.getElementById('adminLoginScreen').style.display='none'; document.getElementById('adminScreen').style.display='flex'; }
-  else{ document.getElementById('adminPassErr').textContent='wrong passcode'; document.getElementById('adminPassErr').style.display='block'; }
+  var pass=document.getElementById('adminPass').value;
+  var errEl=document.getElementById('adminPassErr');
+  errEl.style.display='none';
+  if(!pass){ errEl.textContent='enter password'; errEl.style.display='block'; return; }
+  try{
+    var r=await fetch(FN_BASE+'/admin-login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({password:pass})
+    });
+    var d=await r.json();
+    if(!r.ok){
+      errEl.textContent=r.status===429?'too many attempts — wait 15 min':'wrong passcode';
+      errEl.style.display='block'; return;
+    }
+    _adminToken=d.token; // memory only — never localStorage
+    document.getElementById('adminLoginScreen').style.display='none';
+    document.getElementById('adminScreen').style.display='flex';
+  }catch(e){
+    errEl.textContent='connection error'; errEl.style.display='block';
+  }
 }
 
 async function exportWallets(type){
+  if(!_adminToken){ alert('not authorised'); return; }
   var tbl=type==='masterlist'?'masterlist':'goblist';
   try{ var d=await sbGet(tbl,'select=wallet&limit=10000'); var lines=(d||[]).filter(function(r){return r.wallet;}).map(function(r){return r.wallet;}); var blob=new Blob([lines.join('\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gobinos-'+type+'.txt'; a.click(); }catch(e){ alert('export failed'); }
 }
 
 async function importWallets(){
+  if(!_adminToken){ alert('not authorised'); return; }
   var raw=document.getElementById('importData').value.trim();
   var handle=document.getElementById('importHandle').value.trim()||'collab';
   var status=document.getElementById('importStatus');
@@ -879,6 +905,7 @@ async function importWallets(){
 }
 
 async function clearLeaderboard(){
+  if(!_adminToken){ alert('not authorised'); return; }
   if(!confirm('wipe the entire leaderboard?')) return;
   var status=document.getElementById('importStatus'); status.textContent='wiping...'; status.style.display='block';
   // ── PATCH 15: use score=gte.0 — safe for both integer and UUID primary keys
@@ -886,6 +913,7 @@ async function clearLeaderboard(){
 }
 
 async function runSnapshot(){
+  if(!_adminToken){ alert('not authorised'); return; }
   var status=document.getElementById('snapshotStatus');
   var tweet=document.getElementById('snapshotTweet');
   status.textContent='pulling leaderboard...'; status.style.display='block'; tweet.style.display='none';
@@ -944,6 +972,7 @@ async function runSnapshot(){
 }
 
 async function clearPhase(){
+  if(!_adminToken){ alert('not authorised'); return; }
   if(!confirm('delete all allowlist entries? masterlist stays safe.')) return;
   var status=document.getElementById('importStatus'); status.textContent='clearing...'; status.style.display='block';
   // ── PATCH 16: same fix as clearLeaderboard — score=gte.0 safe for any PK type
@@ -951,15 +980,16 @@ async function clearPhase(){
 }
 
 function checkWallet(){
-  var w=document.getElementById('checkerWallet').value.trim();
+  var w=document.getElementById('checkerWallet').value.trim().toLowerCase();
   var err=document.getElementById('checkerErr'),res=document.getElementById('checkerResult');
   err.style.display='none'; res.style.display='none';
   document.getElementById('checkerWallet').classList.remove('err');
   if(!/^0x[a-fA-F0-9]{40}$/.test(w)){ document.getElementById('checkerWallet').classList.add('err'); err.textContent='enter a valid wallet'; err.style.display='block'; return; }
   var btn=document.querySelector('#checkerScreen .o-btn'); btn.textContent='checking...'; btn.disabled=true;
-  sbGet('masterlist','wallet=ilike.'+encodeURIComponent(w)+'&select=id').then(function(d){
+  // Issue 12: Edge Function returns {eligible:bool} only — no raw wallet data exposed
+  fnPost('check-wallet',{wallet:w.toLowerCase()}).then(function(d){
     btn.textContent='check'; btn.disabled=false; res.style.display='block';
-    if(d&&d.length){ res.style.background='rgba(42,92,42,0.3)'; res.style.border='1px solid rgba(74,222,128,0.4)'; res.style.color='#4ade80'; res.textContent='ur on the goblist \u{1F9CC}'; }
+    if(d&&d.eligible){ res.style.background='rgba(42,92,42,0.3)'; res.style.border='1px solid rgba(74,222,128,0.4)'; res.style.color='#4ade80'; res.textContent='ur on the goblist 🧌'; }
     else{ res.style.background='rgba(80,0,0,0.3)'; res.style.border='1px solid rgba(204,34,0,0.4)'; res.style.color='#cc2200'; res.textContent='ngmi. not on the list'; }
   }).catch(function(){ btn.textContent='check'; btn.disabled=false; err.textContent='something broke, try again'; err.style.display='block'; });
 }
