@@ -847,10 +847,12 @@ async function takeSnapshot(){
 }
 
 async function saveAdminCap(){
+  if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminCap').value)||500; GTD_CAP=v;
   try{ await sbPatch('config','name=eq.GtdCap',{value:String(v)}); document.getElementById('adminScreen').style.display='none'; alert('saved! gtd cap = '+v); }catch(e){ alert('failed to save'); }
 }
 async function saveAdminScore(){
+  if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminScore').value)||500; WIN_SCORE=v;
   try{ await sbPatch('config','name=eq.WinScore',{value:String(v)}); document.getElementById('adminScreen').style.display='none'; alert('saved! win score = '+v); }catch(e){ alert('failed to save'); }
 }
