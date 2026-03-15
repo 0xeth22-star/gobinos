@@ -1,3 +1,4 @@
+
 var GOBINOS_GATE = (function () {
 
   var CONTRACT = '0x5f4a162f85e0a958faaef579ca220143607a5b64';
@@ -33,29 +34,40 @@ var GOBINOS_GATE = (function () {
       if (_wallet && _provider) verifyHolder(_wallet);
     });
 
-    // Listen for MetaMask account/chain changes
     if (window.ethereum) {
+      // ── Wallet switch: gate snaps back up instantly, then re-verifies ──
+      // Fires when user picks a different account in MetaMask — even mid-game.
       window.ethereum.on('accountsChanged', function (accounts) {
-        if (!accounts || !accounts.length) { disconnect(); return; }
+        if (!accounts || !accounts.length) {
+          _provider = null;
+          _wallet   = null;
+          try { localStorage.removeItem('gobWallet'); } catch (e) {}
+          showState('wgConnect');
+          return;
+        }
+        var newWallet = ethers.getAddress(accounts[0]);
+        if (newWallet === _wallet) return; // same wallet — ignore
+        // Different wallet — kill session, show gate, re-verify
         _provider = new ethers.BrowserProvider(window.ethereum);
-        _wallet   = ethers.getAddress(accounts[0]);
+        _wallet   = newWallet;
+        try { localStorage.removeItem('gobWallet'); } catch (e) {}
+        showState('wgLoading');
         verifyHolder(_wallet);
       });
+
       window.ethereum.on('chainChanged', function () {
-        // Simplest safe approach — reload on chain switch
         window.location.reload();
       });
     }
 
-    // Check if MetaMask is already unlocked with a saved wallet (no popup)
+    // Silent reconnect — passive check, never triggers MetaMask popup
     var saved = null;
     try { saved = localStorage.getItem('gobWallet'); } catch (e) {}
 
     if (saved && window.ethereum) {
       try {
-        // eth_accounts is passive — never triggers a popup
         var accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        var match    = accounts.find(function (a) {
+        var match = accounts.find(function (a) {
           return a.toLowerCase() === saved.toLowerCase();
         });
         if (match) {
@@ -66,7 +78,7 @@ var GOBINOS_GATE = (function () {
           await verifyHolder(_wallet);
           return;
         }
-      } catch (e) { /* MetaMask not available or locked — fall through */ }
+      } catch (e) { /* MetaMask locked or unavailable */ }
     }
 
     showState('wgConnect');
@@ -93,7 +105,7 @@ var GOBINOS_GATE = (function () {
       await verifyHolder(_wallet);
     } catch (e) {
       if (e.code === 4001) {
-        showState('wgConnect'); // user rejected MetaMask popup
+        showState('wgConnect');
       } else {
         console.error('[gate] connect failed', e);
         showState('wgConnect');
@@ -101,11 +113,10 @@ var GOBINOS_GATE = (function () {
     }
   }
 
-  // ── On-chain verify + sign + session token ────────────────────────────────
+  // ── On-chain verify + sign + session token ─────────────────────────────────
   async function verifyHolder(wallet) {
     showState('wgLoading');
     try {
-      // 1. balanceOf read — public call, safe client-side
       var contract = new ethers.Contract(CONTRACT, ABI, _provider);
       var balance  = await contract.balanceOf(wallet);
 
@@ -114,8 +125,6 @@ var GOBINOS_GATE = (function () {
         return;
       }
 
-      // 2. Sign message — proves the user controls this wallet's private key
-      //    This is what stops someone typing another address in the console.
       var signer = await _provider.getSigner();
       var nonce  = crypto.randomUUID();
       var msg    = 'Gobinos: verify wallet ownership.\nNonce: ' + nonce;
@@ -125,18 +134,16 @@ var GOBINOS_GATE = (function () {
         sig = await signer.signMessage(msg);
       } catch (signErr) {
         if (signErr.code === 4001) {
-          // User rejected signing — go back to connect, don't punish them
-          disconnect();
+          showState('wgConnect');
           return;
         }
         throw signErr;
       }
 
-      // 3. Issue session token — Edge Function verifies signature server-side
       var r = await fetch(FN_BASE + '/issue-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
           'Authorization': 'Bearer ' + SB_KEY
         },
         body: JSON.stringify({
@@ -148,13 +155,12 @@ var GOBINOS_GATE = (function () {
 
       if (!r.ok) {
         var errData = await r.json().catch(function () { return {}; });
-        throw new Error(errData.error || 'session request failed (' + r.status + ')');
+        throw new Error(errData.error || 'session failed (' + r.status + ')');
       }
 
       var d = await r.json();
       if (!d.token) throw new Error('no token returned');
 
-      // 4. Hand off wallet + token to game, then hide gate
       try { localStorage.setItem('gobWallet', wallet); } catch (e) {}
       _gob._setWalletAuth(wallet.toLowerCase(), d.token);
       hideGate();
@@ -178,8 +184,20 @@ var GOBINOS_GATE = (function () {
     }
   }
 
-  // ── Disconnect ─────────────────────────────────────────────────────────────
-  function disconnect() {
+  // ── Disconnect — actually revokes MetaMask site permission ─────────────────
+  // wallet_revokePermissions tells MetaMask this site no longer has access.
+  // Next connect click shows the full account picker — not old wallet auto-selected.
+  async function disconnect() {
+    if (window.ethereum) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }]
+        });
+      } catch (e) {
+        // Older MetaMask versions don't support this — falls back to UI-only disconnect
+      }
+    }
     _provider = null;
     _wallet   = null;
     try { localStorage.removeItem('gobWallet'); } catch (e) {}
