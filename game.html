@@ -833,9 +833,14 @@ function winGame(){
   sndWin();
 }
 
-function keepGrinding(){
+async function keepGrinding(){
   document.getElementById('winScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block'; document.getElementById('muteBtn').style.display='block';
+  // Fix 7: refresh session token before next game — nonce is single-use so we need a fresh one
+  // verifyHolder re-runs balanceOf + sign + issue-session silently (wallet already connected)
+  if(typeof GOBINOS_GATE !== 'undefined') {
+    await GOBINOS_GATE.refreshToken();
+  }
   gamePaused=false; gameRunning=true; startBgMusic(); lastTime=performance.now(); requestAnimationFrame(gameLoop);
 }
 
