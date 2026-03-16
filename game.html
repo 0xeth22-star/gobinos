@@ -836,10 +836,9 @@ function winGame(){
 async function keepGrinding(){
   document.getElementById('winScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block'; document.getElementById('muteBtn').style.display='block';
-  // Fix 7: refresh session token before next game — nonce is single-use so we need a fresh one
-  // verifyHolder re-runs balanceOf + sign + issue-session silently (wallet already connected)
+  // Pass token directly — no window bridge needed or exposed (Fix 2)
   if(typeof GOBINOS_GATE !== 'undefined') {
-    await GOBINOS_GATE.refreshToken();
+    await GOBINOS_GATE.refreshToken(_sessionToken);
   }
   gamePaused=false; gameRunning=true; startBgMusic(); lastTime=performance.now(); requestAnimationFrame(gameLoop);
 }
@@ -1139,11 +1138,8 @@ window.__gobSetAuth = function(w, t) {
   // No self-destruct — re-verification (tab focus, wallet switch) must work
 };
 
-// Read bridge — allows wallet-gate.js refreshToken() to get the current session token
-// so it can call refresh-session without a new MetaMask signature prompt.
-window.__gobGetToken = function() {
-  return _sessionToken || null;
-};
+// Note: session token is passed directly to GOBINOS_GATE.refreshToken(_sessionToken)
+// from keepGrinding — no window read bridge needed or exposed.
 
 })();
 </script>
