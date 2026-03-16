@@ -1,4 +1,8 @@
-
+/**
+ * wallet-gate.js
+ * Gobinos NFT holder gate — vanilla JS, ethers v6 UMD
+ * Loads AFTER _gob is defined. Calls _gob._setWalletAuth() on success.
+ */
 var GOBINOS_GATE = (function () {
 
   var CONTRACT = '0x5f4a162f85e0a958faaef579ca220143607a5b64';
@@ -147,8 +151,11 @@ var GOBINOS_GATE = (function () {
       var contract = new ethers.Contract(CONTRACT, ABI, _provider);
       var balance  = await contract.balanceOf(wallet);
 
-      if (false && balance < 1n) {
-
+      // TESTING MODE — remove before mint
+      // if (balance < 1n) {
+      //   showState('wgNotHolder');
+      //   return;
+      // }
 
       var signer = await _provider.getSigner();
       var nonce  = crypto.randomUUID();
