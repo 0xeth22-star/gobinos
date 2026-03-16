@@ -246,18 +246,12 @@ var GOBINOS_GATE = (function () {
   // Fix 6: refreshToken — get a fresh session token for "keep grinding" with NO MetaMask prompt.
   // Sends the existing valid token to refresh-session, which re-verifies NFT balance server-side
   // and issues a new JWT with a fresh nonce. No wallet signature required.
-  async function refreshToken() {
+  // Fix 2: token passed as parameter — no window read bridge needed
+  async function refreshToken(currentToken) {
     if (!_wallet) return;
-    var currentToken = null;
-    try {
-      // Read current session token from game via the bridge context
-      // We need the current token — stored in _gob's _sessionToken
-      // Access it via a temporary read bridge if available
-      currentToken = window.__gobGetToken ? window.__gobGetToken() : null;
-    } catch(e) {}
 
     if (!currentToken) {
-      // Fallback: no current token, do full re-verify (will prompt MetaMask)
+      // No token available — fall back to full re-verify (will prompt MetaMask)
       if (_provider) await verifyHolder(_wallet);
       return;
     }
