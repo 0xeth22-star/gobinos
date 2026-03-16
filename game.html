@@ -819,15 +819,12 @@ function _setWalletAuth(wallet, sessionToken){
   _sessionToken   = sessionToken;
   _sessionStartMs = Date.now();
 
-  // Always pre-fill the wallet input (it stays in DOM even when hidden)
   document.getElementById('startWallet').value = wallet;
 
-  // Restore saved twitter handle if returning player
   var savedHandle = '';
   try { savedHandle = localStorage.getItem('gobHandle') || ''; } catch(e){}
 
   if(savedHandle){
-    // Returning player — show their card
     playerHandle = savedHandle;
     hasPlayed = true;
     document.getElementById('startTwitter').value = savedHandle;
@@ -836,11 +833,13 @@ function _setWalletAuth(wallet, sessionToken){
     document.getElementById('newGoblinCard').style.display = 'none';
     document.getElementById('returningCard').style.display = 'block';
   } else {
-    // New player — wallet pre-filled, clear handle input
     document.getElementById('startTwitter').value = '';
     document.getElementById('returningCard').style.display = 'none';
     document.getElementById('newGoblinCard').style.display = 'block';
   }
+
+  // ⚠️ Show the start screen — gate is already hidden by wallet-gate.js
+  document.getElementById('startScreen').style.display = 'flex';
 }
 
 // ── PATCH 11: validateAndStart is now async — fetches session token before game starts
@@ -1222,6 +1221,13 @@ canvas.style.opacity='1';
   }
 })();
 
+// ── AUTH BRIDGE ───────────────────────────────────────────────────────────────
+window.__gobSetAuth = function(w, t) {
+  if (typeof w !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(w)) return;
+  if (typeof t !== 'string' || t.length < 20) return;
+  _setWalletAuth(w, t);
+};
+
 return {
   validateAndStart:validateAndStart, resetToNewGoblin:resetToNewGoblin,
   showLeaderboard:showLeaderboard, restartGame:restartGame, goMenu:goMenu,
@@ -1231,16 +1237,6 @@ return {
   clearLeaderboard:clearLeaderboard,
   checkWallet:checkWallet, runSnapshot:runSnapshot,
   setLbTab:setLbTab, takeSnapshot:takeSnapshot
-  // _setWalletAuth intentionally NOT exported — access via one-time bridge below
-};
-
-// ── AUTH BRIDGE ───────────────────────────────────────────────────────────────
-// wallet-gate.js calls this after every successful verify.
-// _setWalletAuth is NOT on _gob's return object — this is the only call path.
-window.__gobSetAuth = function(w, t) {
-  if (typeof w !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(w)) return;
-  if (typeof t !== 'string' || t.length < 20) return;
-  _setWalletAuth(w, t);
 };
 
 })();
