@@ -1,8 +1,4 @@
-/**
- * wallet-gate.js
- * Gobinos NFT holder gate — vanilla JS, ethers v6 UMD
- * Loads AFTER _gob is defined. Calls _gob._setWalletAuth() on success.
- */
+
 var GOBINOS_GATE = (function () {
 
   var CONTRACT = '0x5f4a162f85e0a958faaef579ca220143607a5b64';
