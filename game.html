@@ -234,6 +234,13 @@ function fnPost(endpoint,body){
 }
 
 var WIN_SCORE=100000000;
+var STARTING_LIVES=3;
+var BOSS_WAVE_INTERVAL=10;
+var BOSS_HP=20;
+var POWERUP_CHANCE=8;
+var bossKillCount=0;
+var streakPeak=0;
+var currentStreak=0;
 var playerWallet='', playerHandle='';
 var _audioCtx=null, soundOn=true;
 
@@ -317,7 +324,7 @@ function resize(){
 resize();
 window.addEventListener('resize',function(){ resize(); if(!gameRunning) drawBG(); });
 
-var score=0,wave=1,lives=7,gameRunning=false,hasWon=false;
+var score=0,wave=1,lives=3,gameRunning=false,hasWon=false;
 var GOBLIN_X=GW/2;
 var enemies=[],projectiles=[],particles=[],missTexts=[];
 var spawnTimer=0,waveTimer=0,lastTime=0;
@@ -326,6 +333,8 @@ var keys={};
 var hasPlayed=false;
 var touchHeld=false,touchStartX=0,touchStartTime=0;
 var autoShootTimer=0,gamePaused=false;
+var powerups=[],shieldActive=false,rapidFireTimer=0;
+var _bossWaveSpawned=false;
 // --- anti-bot ---
 var _lastRealInput=0, _lastMouseMove=0, _shootCount=0, _shootWindow=0, _botFlagged=false;
 var _devOpen=false;
@@ -381,8 +390,8 @@ function shoot(isAuto){
   var now=Date.now();
   // require real user input within last 800ms
   if(now-_lastRealInput>800){ return; }
-  // hard rate limit: min 120ms between shots
-  if(now-_lastShot<60){ return; }
+  // hard rate limit: min 60ms (15ms during rapid fire) between shots
+  if(now-_lastShot<(rapidFireTimer>0?15:60)){ return; }
   // rapid fire detection: >8 shots in 1 second = bot
   if(now-_shootWindow>1000){ _shootWindow=now; _shootCount=0; }
   _shootCount++;
@@ -428,7 +437,50 @@ function drawGoblin(){
 
 function drawEnemy(e){
   ctx.save(); ctx.translate(e.x,e.y);
-  if(e.type==='punk'){
+  if(e.type==='boss'){
+    // ── BOSS: giant horned goblin skull, 3× ape size
+    var s=Math.sin(e.wobble*0.5)*0.04; ctx.scale(1+s,1-s);
+    // outer aura
+    ctx.globalAlpha=0.18+Math.abs(Math.sin(e.wobble))*0.12;
+    ctx.fillStyle='#ff3300';
+    ctx.beginPath(); ctx.arc(0,0,e.r*1.25,0,Math.PI*2); ctx.fill();
+    // shadow body
+    ctx.globalAlpha=0.5; ctx.fillStyle='#1a0a00';
+    ctx.beginPath(); ctx.ellipse(0,e.r*0.12,e.r*.9,e.r*.72,0,0,Math.PI*2); ctx.fill();
+    // body
+    ctx.globalAlpha=1; ctx.fillStyle=e.flash>0?'#ff8800':'#6b1a00';
+    ctx.beginPath(); ctx.ellipse(0,0,e.r*.82,e.r*.7,0,0,Math.PI*2); ctx.fill();
+    // chest plate
+    ctx.fillStyle=e.flash>0?'#ffaa33':'#9b3300';
+    ctx.beginPath(); ctx.ellipse(0,e.r*.15,e.r*.44,e.r*.36,0,0,Math.PI*2); ctx.fill();
+    // horns
+    ctx.fillStyle=e.flash>0?'#ffcc00':'#cc4400';
+    ctx.beginPath(); ctx.moveTo(-e.r*.55,-e.r*.65); ctx.lineTo(-e.r*.7,-e.r*1.35); ctx.lineTo(-e.r*.38,-e.r*.6); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(e.r*.55,-e.r*.65); ctx.lineTo(e.r*.7,-e.r*1.35); ctx.lineTo(e.r*.38,-e.r*.6); ctx.fill();
+    // arms
+    ctx.fillStyle=e.flash>0?'#ff8800':'#6b1a00';
+    ctx.beginPath(); ctx.ellipse(-e.r*.82,e.r*.1,e.r*.32,e.r*.2,0.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.r*.82,e.r*.1,e.r*.32,e.r*.2,-0.4,0,Math.PI*2); ctx.fill();
+    // stinger
+    ctx.strokeStyle='#2a0a00'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(0,e.r*.7); ctx.lineTo(0,e.r*1.35); ctx.stroke();
+    // eyes — glowing red
+    ctx.shadowColor='#ff0000'; ctx.shadowBlur=14;
+    ctx.fillStyle='#ff2200';
+    ctx.beginPath(); ctx.arc(-e.r*.28,-e.r*.08,e.r*.13,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r*.28,-e.r*.08,e.r*.13,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    // hp bar (full width)
+    var bw=e.r*1.7, bh=7, bx=-e.r*.85, by=-e.r*1.08;
+    ctx.fillStyle='rgba(255,0,0,0.18)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle=e.flash>0?'#ffaa00':'#ff3300';
+    ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),bh);
+    // BOSS label
+    ctx.font='bold '+Math.round(e.r*0.32)+'px "Space Mono"';
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(255,80,0,0.9)';
+    ctx.fillText('BOSS',0,-e.r*1.2);
+  } else if(e.type==='punk'){
     // zombie punk — magenta, small, spiky mohawk
     var s=Math.sin(e.wobble)*0.09; ctx.scale(1+s,1-s);
     // wings
@@ -531,6 +583,34 @@ function drawProjectile(p){
   ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
 }
 
+function drawPowerup(pu){
+  ctx.save(); ctx.translate(pu.x,pu.y);
+  var pulse=0.88+Math.abs(Math.sin(Date.now()*0.005))*0.18;
+  ctx.scale(pulse,pulse);
+  if(pu.type==='shield'){
+    // Blue shield orb
+    ctx.shadowColor='#00aaff'; ctx.shadowBlur=16;
+    ctx.fillStyle='rgba(0,120,255,0.25)';
+    ctx.beginPath(); ctx.arc(0,0,pu.r*1.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0088ff';
+    ctx.beginPath(); ctx.arc(0,0,pu.r*0.75,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#aaddff'; ctx.font='bold '+Math.round(pu.r*1.1)+'px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🛡',0,1);
+  } else {
+    // Orange rapid-fire orb
+    ctx.shadowColor='#ffaa00'; ctx.shadowBlur=16;
+    ctx.fillStyle='rgba(255,140,0,0.22)';
+    ctx.beginPath(); ctx.arc(0,0,pu.r*1.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff8800';
+    ctx.beginPath(); ctx.arc(0,0,pu.r*0.75,0,Math.PI*2); ctx.fill();
+    ctx.font='bold '+Math.round(pu.r*1.1)+'px serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⚡',0,1);
+  }
+  ctx.shadowBlur=0; ctx.restore();
+}
+
 function drawBurstTrail(e){
   if(!e.burst) return;
   ctx.save();
@@ -559,6 +639,28 @@ function drawHUD(){
   var remaining=WIN_SCORE-score;
   ctx.font=Math.round(GH*0.013)+'px "Space Mono"'; ctx.textAlign='center';
   ctx.fillStyle='rgba(74,222,128,0.35)'; ctx.fillText('grind for rank · '+score+' kills',GW/2,GH-Math.round(GH*0.055));
+  // ── Streak display (shown when >= 5)
+  if(currentStreak>=5){
+    var streakFs=Math.round(GH*0.016);
+    ctx.font=(currentStreak>=10?'bold ':'')+streakFs+'px "Space Mono"';
+    ctx.textAlign='center';
+    if(currentStreak>=10){
+      // bright green + pulse anim
+      var pulse=0.75+Math.abs(Math.sin(Date.now()*0.006))*0.25;
+      ctx.globalAlpha=pulse;
+      ctx.fillStyle='#4ade80';
+    } else {
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#22c55e';
+    }
+    ctx.fillText('🔥 '+currentStreak+' STREAK',GW/2,GH-Math.round(GH*0.072));
+    ctx.globalAlpha=1;
+  }
+  // ── Powerup status indicators (top-left of lane)
+  var indY=Math.round(GH*0.075), indX=LANE_X+8;
+  ctx.font=Math.round(GH*0.014)+'px "Space Mono"'; ctx.textAlign='left';
+  if(shieldActive){ ctx.fillStyle='#00aaff'; ctx.fillText('🛡 SHIELD',indX,indY); indY+=Math.round(GH*0.022); }
+  if(rapidFireTimer>0){ ctx.fillStyle='#ffaa00'; ctx.fillText('⚡ '+Math.ceil(rapidFireTimer)+'s',indX,indY); }
 }
 
 function gameLoop(ts){
@@ -570,33 +672,74 @@ function gameLoop(ts){
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
   if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.08,0.3-(wave-1)*0.01); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
+  // ── Rapid fire timer decay
+  if(rapidFireTimer>0) rapidFireTimer-=dt;
+
+  // ── Spawn logic (boss wave vs normal)
+  var isBossWave=(BOSS_WAVE_INTERVAL>0 && wave%BOSS_WAVE_INTERVAL===0);
   spawnTimer+=dt;
   var rate=Math.max(1.0,2.8-wave*0.07);
   if(spawnTimer>=rate){
     spawnTimer=0;
-    var n=Math.min(Math.floor(wave/8)+1,2);
-    for(var i=0;i<n;i++){
-      var type='mosquito';
-      var roll=Math.random();
-      if(wave>=12 && roll<0.18) type='ape';
-      else if(wave>=5 && roll<0.28) type='punk';
-      var cfg={
-        mosquito:{r:10+Math.random()*5,spd:0.7+wave*0.025+Math.random()*0.12,hp:1,pts:1},
-        punk:{r:7+Math.random()*3,spd:0.9+wave*0.028+Math.random()*0.14,hp:1,pts:2},
-        ape:{r:17+Math.random()*4,spd:0.45+wave*0.018+Math.random()*0.1,hp:3,pts:3}
-      }[type];
-      var burstChance=0;
-      enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:null});
+    if(isBossWave){
+      // Boss wave — spawn boss once, no normal enemies
+      if(!_bossWaveSpawned){
+        _bossWaveSpawned=true;
+        var br=54; // 3× ape base radius (18)
+        enemies.push({x:LANE_X+LANE_W/2,y:-br,type:'boss',r:br,spd:0.28+wave*0.006,baseSpd:0.28,wobble:0,zz:0,hp:BOSS_HP,maxHp:BOSS_HP,pts:10,flash:0,dead:false,burst:false,burstAt:null});
+      }
+    } else {
+      var n=Math.min(Math.floor(wave/8)+1,2);
+      for(var i=0;i<n;i++){
+        var type='mosquito';
+        var roll=Math.random();
+        if(wave>=12 && roll<0.18) type='ape';
+        else if(wave>=5 && roll<0.28) type='punk';
+        var cfg={
+          mosquito:{r:10+Math.random()*5,spd:0.7+wave*0.025+Math.random()*0.12,hp:1,pts:1},
+          punk:{r:7+Math.random()*3,spd:0.9+wave*0.028+Math.random()*0.14,hp:1,pts:2},
+          ape:{r:17+Math.random()*4,spd:0.45+wave*0.018+Math.random()*0.1,hp:3,pts:3}
+        }[type];
+        enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:null});
+      }
     }
   }
-  waveTimer+=dt; if(waveTimer>=35){ waveTimer=0; wave++; }
-  for(var i=0;i<enemies.length;i++){ var e=enemies[i]; 
-    e.y+=e.spd; e.wobble+=0.11; 
-    if(e.type==='punk'){ e.zz+=0.10; e.x+=Math.sin(e.zz)*0.9; } else { e.x+=Math.sin(e.wobble)*0.35; } 
+  waveTimer+=dt;
+  if(waveTimer>=35){
+    waveTimer=0; wave++;
+    _bossWaveSpawned=false;
+    // Random powerup drop per wave
+    if(POWERUP_CHANCE>0 && Math.random()*100<POWERUP_CHANCE){
+      var pType=Math.random()<0.5?'shield':'rapidfire';
+      powerups.push({x:LANE_X+LANE_W*0.2+Math.random()*LANE_W*0.6,y:-20,type:pType,r:14,vy:1.8,dead:false});
+    }
+  }
+  // ── Enemy movement
+  for(var i=0;i<enemies.length;i++){ var e=enemies[i];
+    e.y+=e.spd; e.wobble+=0.11;
+    if(e.type==='punk'){ e.zz+=0.10; e.x+=Math.sin(e.zz)*0.9; }
+    else if(e.type==='boss'){ e.x+=Math.sin(e.wobble*0.5)*0.6; }
+    else { e.x+=Math.sin(e.wobble)*0.35; }
     e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
+  // ── Projectile movement
   for(var i=0;i<projectiles.length;i++){ var p=projectiles[i]; p.trail.push({x:p.x,y:p.y}); if(p.trail.length>10) p.trail.shift(); p.y+=p.vy; if(p.y<-20) p.dead=true; }
+  // ── Particle / text movement
   for(var i=0;i<particles.length;i++){ var p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.22; p.life-=dt*2.4; }
   for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; m.y-=1.1; m.life-=dt*2; }
+  // ── Powerup movement + player collection
+  for(var i=0;i<powerups.length;i++){
+    var pu=powerups[i]; if(pu.dead) continue;
+    pu.y+=pu.vy;
+    if(pu.y>GH+pu.r){ pu.dead=true; continue; }
+    if(Math.hypot(GOBLIN_X-pu.x,GOBLIN_Y-pu.y)<pu.r+24){
+      pu.dead=true;
+      if(pu.type==='shield'){ shieldActive=true; }
+      else if(pu.type==='rapidfire'){ rapidFireTimer=5; }
+      // spawn collect particles
+      for(var k=0;k<10;k++){ var a2=Math.random()*Math.PI*2,sp2=2+Math.random()*3; particles.push({x:pu.x,y:pu.y,vx:Math.cos(a2)*sp2,vy:Math.sin(a2)*sp2,life:1,r:2+Math.random()*2,col:pu.type==='shield'?'#00aaff':'#ffaa00'}); }
+    }
+  }
+  // ── Projectile–enemy collision
   for(var pi=0;pi<projectiles.length;pi++){
     var p=projectiles[pi]; if(p.dead) continue;
     for(var ei=0;ei<enemies.length;ei++){
@@ -605,29 +748,49 @@ function gameLoop(ts){
         p.dead=true; e.hp--; e.flash=0.16;
         if(e.hp<=0){
           e.dead=true; score+=(e.pts||1); sndExplode();
-          for(var k=0;k<8;k++){ var a=Math.random()*Math.PI*2,sp=2+Math.random()*4; particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:2+Math.random()*2.5,col:Math.random()>.5?'#4ade80':'#2a7a2a'}); }
+          // Streak tracking
+          currentStreak++;
+          if(currentStreak>streakPeak) streakPeak=currentStreak;
+          // Boss death bonus
+          if(e.type==='boss'){
+            bossKillCount++;
+            var bType=Math.random()<0.5?'shield':'rapidfire';
+            powerups.push({x:e.x,y:e.y,type:bType,r:14,vy:1.5,dead:false});
+          }
+          for(var k=0;k<(e.type==='boss'?20:8);k++){ var a=Math.random()*Math.PI*2,sp=2+Math.random()*(e.type==='boss'?7:4); particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:2+Math.random()*2.5,col:e.type==='boss'?'#ff6600':Math.random()>.5?'#4ade80':'#2a7a2a'}); }
           if(score>=WIN_SCORE&&!hasWon){ hasWon=true; winGame(); return; }
         }
         break;
       }
     }
   }
+  // ── Enemy reaches player — hit or shield absorb
   var gr=Math.round(GH*0.04);
   for(var i=0;i<enemies.length;i++){ var e=enemies[i]; if(e.dead) continue; if(e.y>GOBLIN_Y-gr){
-      e.dead=true; lives--; hitFlash=0.4; sndHit(); missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1}); if(lives<=0){ gameOver(); return; }
+    e.dead=true; hitFlash=0.4; sndHit();
+    currentStreak=0; // streak breaks on hit
+    if(shieldActive){
+      shieldActive=false; // shield absorbs hit
+      missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1.2,txt:'BLOCKED'});
+    } else {
+      lives--; missTexts.push({x:e.x,y:GOBLIN_Y-gr*2,life:1});
+      if(lives<=0){ gameOver(); return; }
+    }
   }}
   enemies=enemies.filter(function(e){return !e.dead;});
   projectiles=projectiles.filter(function(p){return !p.dead;});
   particles=particles.filter(function(p){return p.life>0;});
   missTexts=missTexts.filter(function(m){return m.life>0;});
+  powerups=powerups.filter(function(pu){return !pu.dead;});
   drawBG();
   for(var i=0;i<enemies.length;i++) drawBurstTrail(enemies[i]);
   for(var i=0;i<enemies.length;i++) drawEnemy(enemies[i]);
+  for(var i=0;i<powerups.length;i++) drawPowerup(powerups[i]);
   for(var i=0;i<projectiles.length;i++) drawProjectile(projectiles[i]);
   for(var i=0;i<particles.length;i++){ var p=particles[i]; ctx.globalAlpha=p.life; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fill(); }
   ctx.globalAlpha=1;
   ctx.font='bold '+Math.round(GH*0.02)+'px "Space Mono"'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-  for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; ctx.globalAlpha=m.life; ctx.fillStyle='#cc2200'; ctx.fillText('MISS',m.x,m.y); }
+  for(var i=0;i<missTexts.length;i++){ var m=missTexts[i]; ctx.globalAlpha=m.life; ctx.fillStyle=m.txt?'#00aaff':'#cc2200'; ctx.fillText(m.txt||'MISS',m.x,m.y); }
   ctx.globalAlpha=1; drawGoblin(); drawHUD();
   requestAnimationFrame(gameLoop);
 }
@@ -733,10 +896,12 @@ function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('pauseBtn').style.display='block';
   document.getElementById('muteBtn').style.display='block';
-  score=0; wave=1; lives=7; hasWon=false; GOBLIN_X=GW/2; gamePaused=false;
+  score=0; wave=1; lives=STARTING_LIVES; hasWon=false; GOBLIN_X=GW/2; gamePaused=false;
+  bossKillCount=0; streakPeak=0; currentStreak=0;
+  powerups=[]; shieldActive=false; rapidFireTimer=0; _bossWaveSpawned=false;
   _botFlagged=false; _shootCount=0; _shotTimestamps=[]; // ── PATCH 12: reset variance tracker
   _lastRealInput=Date.now(); _lastMouseMove=Date.now();
-  enemies=[]; projectiles=[]; particles=[]; missTexts=[];
+  enemies=[]; projectiles=[]; particles=[]; missTexts=[]; powerups=[];
   spawnTimer=0; waveTimer=0; touchHeld=false; stopAutoShoot();
   gameRunning=true; lastTime=performance.now(); startBgMusic(); requestAnimationFrame(gameLoop);
 }
@@ -765,7 +930,7 @@ function _submitScore(w,t,sc){
     console.warn('[gobinos] no session token — score not submitted');
     return;
   }
-  fnPost('submit-score',{wallet:w,twitter:t,score:sc,action:'submit'}).catch(function(e){
+  fnPost('submit-score',{wallet:w,twitter:t,score:sc,action:'submit',boss_kills:bossKillCount,streak_peak:streakPeak}).catch(function(e){
     console.error('[gobinos] score submission failed:',e.message);
   });
 }
@@ -1024,6 +1189,10 @@ function checkWallet(){
     d.forEach(function(row){
       var val=parseInt(row.value);
       if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
+      if(row.name==='STARTING_LIVES'&&val>0) STARTING_LIVES=val;
+      if(row.name==='BOSS_WAVE_INTERVAL'&&val>0) BOSS_WAVE_INTERVAL=val;
+      if(row.name==='BOSS_HP'&&val>0) BOSS_HP=val;
+      if(row.name==='POWERUP_CHANCE'&&val>=0) POWERUP_CHANCE=val;
       if(row.name==='GameOn'&&row.value==='0'){ window.location.replace('/'); }
     });
   }).catch(function(){});
