@@ -62,10 +62,10 @@ var GOBINOS_GATE = (function () {
     document.getElementById('wgDisconnectBtn').addEventListener('click', disconnect);
     document.getElementById('wgSwitchBtn').addEventListener('click', switchNetwork);
 
-    // Re-verify on every tab focus — never trust stale state
-    window.addEventListener('focus', function () {
-      if (_wallet && _provider) verifyHolder(_wallet);
-    });
+    // Focus re-verify disabled for testing — Rabby triggers loop
+    // window.addEventListener('focus', function () {
+    //   if (_wallet && _provider) verifyHolder(_wallet);
+    // });
 
     if (window.ethereum) {
       // ── Wallet switch: gate snaps back up instantly, then re-verifies ──
