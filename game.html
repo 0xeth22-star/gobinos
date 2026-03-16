@@ -1234,22 +1234,14 @@ return {
   // _setWalletAuth intentionally NOT exported — access via one-time bridge below
 };
 
-// ── ONE-TIME AUTH BRIDGE (Issue 2+8 fix) ──────────────────────────────────────
-// wallet-gate.js calls window.__gobSetAuth(wallet, token) exactly once.
-// The bridge self-destructs after first use — no permanent public handle on
-// _setWalletAuth, nothing callable mid-session by extensions or XSS payloads.
-// Non-destructing bridge — token is the security primitive, not bridge deletion.
-// _setWalletAuth is NOT on _gob's return object, so this is the only call path.
-// wallet-gate.js calls this after every successful verify (focus, wallet switch, init).
+// ── AUTH BRIDGE ───────────────────────────────────────────────────────────────
+// wallet-gate.js calls this after every successful verify.
+// _setWalletAuth is NOT on _gob's return object — this is the only call path.
 window.__gobSetAuth = function(w, t) {
   if (typeof w !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(w)) return;
   if (typeof t !== 'string' || t.length < 20) return;
   _setWalletAuth(w, t);
-  // No self-destruct — re-verification (tab focus, wallet switch) must work
 };
-
-// Note: session token is passed directly to GOBINOS_GATE.refreshToken(_sessionToken)
-// from keepGrinding — no window read bridge needed or exposed.
 
 })();
 </script>
