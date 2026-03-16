@@ -1,8 +1,7 @@
 {
   "rewrites": [
     { "source": "/", "destination": "/game.html" },
-    { "source": "/game", "destination": "/game.html" },
-    { "source": "/upgrade", "destination": "/upgrade.html" }
+    { "source": "/game", "destination": "/game.html" }
   ],
   "headers": [
     {
