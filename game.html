@@ -38,13 +38,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 
     <!-- STATE 1: loading / checking chain -->
     <div class="card" id="wgLoading">
-      <div style="font-size:2.8rem;animation:gobBob 1s ease-in-out infinite;">🧌</div>
+      <img src="goblin-logo.png" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(74,222,128,0.3));animation:gobBob 1s ease-in-out infinite;">
       <div class="o-sub" style="margin-top:14px;letter-spacing:3px;">entering the trenches...</div>
     </div>
 
     <!-- STATE 2: wallet not connected -->
     <div class="card" id="wgConnect" style="display:none;">
-      <div style="font-size:2.8rem;margin-bottom:12px;">🧌</div>
+      <img src="goblin-logo.png" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(74,222,128,0.3));animation:gobBob 3s ease-in-out infinite;margin-bottom:12px;">
       <div class="o-title">GOBINOS</div>
       <div class="o-sub">holders only · no rules</div>
       <button class="o-btn" id="wgConnectBtn" style="letter-spacing:4px;">connect wallet</button>
@@ -60,7 +60,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 
     <!-- STATE 4: connected but not a holder -->
     <div class="card" id="wgNotHolder" style="display:none;">
-      <div style="font-size:2.8rem;margin-bottom:12px;">🧌</div>
+      <img src="goblin-logo.png" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(74,222,128,0.3));animation:gobBob 3s ease-in-out infinite;margin-bottom:12px;">
       <div class="o-title" style="color:#cc2200;">holders only</div>
       <div class="o-sub">you need a gobino to enter the trenches</div>
       <button class="o-btn"
@@ -74,7 +74,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 
     <!-- STATE 0: pre-mint — gate locked, connect button hidden -->
     <div class="card" id="wgPreMint" style="display:none;">
-      <div style="font-size:2.8rem;margin-bottom:12px;animation:gobBob 3s ease-in-out infinite;">🧌</div>
+      <img src="goblin-logo.png" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 18px rgba(74,222,128,0.3));animation:gobBob 3s ease-in-out infinite;margin-bottom:12px;">
       <div class="o-title">GOBINOS</div>
       <div class="o-sub" style="margin-bottom:8px;">the trenches open after mint</div>
       <div style="font-size:0.42rem;color:rgba(107,143,62,0.45);letter-spacing:3px;text-transform:uppercase;margin-top:4px;">holders only · no rules</div>
@@ -82,6 +82,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
 
   </div>
   <!-- ── END WALLET GATE ── -->
+
+  <div class="overlay" id="startScreen" style="display:none;">
     <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'Space Mono',monospace;font-size:.36rem;color:rgba(74,222,128,0.3);letter-spacing:4px;text-transform:uppercase;border:1px solid rgba(74,222,128,0.12);padding:5px 14px;border-radius:2px;">holders only</div>
     <div class="card" id="newGoblinCard">
       <div class="o-title">GOBINOS</div>
@@ -119,7 +121,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="o-title">gm goblin</div>
       <div id="winInfo" style="font-size:.55rem;color:rgba(74,222,128,.6);letter-spacing:2px;margin-bottom:16px;"></div>
       <div class="o-err" id="winErr"></div>
-      <button class="o-btn" id="claimBtn" onclick="_gob.checkCapAndClaim()" style="white-space:nowrap;font-size:.95rem;letter-spacing:2px;">claim GTD spot</button>
       <button class="o-btn" id="keepGrindBtn" onclick="_gob.keepGrinding()" style="background:rgba(20,50,20,0.6);border-color:rgba(74,222,128,0.2);font-size:.85rem;letter-spacing:2px;white-space:nowrap;">keep grinding</button>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
         <button class="o-btn" onclick="_gob.shareScore('win')" style="flex:1;min-width:80px;background:rgba(0,0,0,0.4);border-color:rgba(232,220,200,0.12);font-size:.62rem;padding:9px;letter-spacing:0px;color:rgba(232,220,200,0.45);">post on 𝕏</button>
@@ -169,26 +170,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
       <div class="admin-label">WIN SCORE</div>
       <input class="o-input" id="adminScore" value="9999" style="margin-bottom:6px;">
       <button class="o-btn" onclick="_gob.saveAdminScore()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
-      <div class="admin-label">GTD CAP</div>
-      <input class="o-input" id="adminCap" value="350" style="margin-bottom:6px;">
-      <button class="o-btn" onclick="_gob.saveAdminCap()" style="font-size:.75rem;padding:10px;margin-bottom:16px;">save</button>
-      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
-        <div class="admin-label">EXPORT WALLETS</div>
-        <button class="o-btn" onclick="_gob.exportWallets('allowlist')" style="font-size:.7rem;padding:9px;margin-top:6px;">export allowlist</button>
-        <button class="o-btn" onclick="_gob.exportWallets('masterlist')" style="font-size:.7rem;padding:9px;margin-top:4px;">export masterlist</button>
-      </div>
-      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-bottom:6px;">
-        <div class="admin-label">IMPORT WALLETS</div>
-        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">one wallet per line, writes to both tables</div>
-        <textarea id="importData" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(107,143,62,.3);border-radius:4px;padding:10px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.65rem;height:80px;outline:none;resize:none;" placeholder="0x...&#10;0x..."></textarea>
-        <input class="o-input" id="importHandle" placeholder="@collab handle (optional)" style="margin-top:4px;">
-        <button class="o-btn" onclick="_gob.importWallets()" style="font-size:.7rem;padding:9px;margin-top:4px;">import</button>
-        <div id="importStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
-      </div>
-      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;">
-        <div class="admin-label">DANGER</div>
-        <button class="o-btn red" onclick="_gob.clearPhase()" style="font-size:.7rem;padding:9px;margin-top:6px;">clear allowlist (keep masterlist)</button>
-      </div>
       <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
         <div class="admin-label">LEADERBOARD</div>
         <button class="o-btn red" onclick="_gob.clearLeaderboard()" style="font-size:.7rem;padding:9px;margin-top:6px;">wipe leaderboard</button>
@@ -252,7 +233,7 @@ function fnPost(endpoint,body){
   });
 }
 
-var WIN_SCORE=100000000, GTD_CAP=350;
+var WIN_SCORE=100000000;
 var playerWallet='', playerHandle='';
 var _audioCtx=null, soundOn=true;
 
@@ -316,29 +297,6 @@ function setBgMusicVol(on){ if(bgMusicGain) bgMusicGain.gain.value=on?0.07:0; }
 function shareScore(type){
   var text=type==='win'?score+' kills GTD spot locked\n\ngobinos.wtf\n\n@gobinosoneth':score+' kills mosquitos got me\n\nstill going back in\n\ngobinos.wtf\n\n@gobinosoneth';
   window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');
-}
-
-// ── PATCH 5: checkCapAndClaim now goes through Edge Function (server-side cap check)
-async function checkCapAndClaim(){
-  var btn=document.getElementById('claimBtn');
-  btn.disabled=true; btn.textContent='checking spots...';
-  try{
-    var result=await fnPost('submit-score',{
-      wallet:playerWallet,twitter:playerHandle,score:score,action:'claim'
-    });
-    if(result.already||result.claimed){
-      btn.textContent='ur GTD goblin \u{1F9CC}';
-      btn.style.background='rgba(42,92,42,0.8)';
-      btn.style.borderColor='rgba(74,222,128,0.5)';
-      btn.style.color='#4ade80';
-      if(result.already) document.getElementById('winInfo').textContent='spot already locked in ser';
-    }
-  }catch(e){
-    var msg=e.message||'';
-    if(msg==='spots full'){ btn.textContent='spots gone ser'; btn.style.background='rgba(80,0,0,0.5)'; }
-    else if(msg==='score too low'){ btn.textContent='keep grinding ser'; btn.disabled=false; }
-    else { btn.disabled=false; btn.textContent='broke. try again'; }
-  }
 }
 
 var canvas=document.getElementById('gameCanvas');
@@ -826,8 +784,6 @@ function winGame(){
   hasPlayed=true; gameRunning=false; gamePaused=true; stopAutoShoot();
   document.getElementById('pauseBtn').style.display='none';
   document.getElementById('winInfo').textContent=escHtml(playerHandle)+(playerWallet?' · '+playerWallet.slice(0,6)+'...'+playerWallet.slice(-4):'');
-  var cb=document.getElementById('claimBtn');
-  cb.disabled=false; cb.textContent='claim GTD spot'; cb.style.background=''; cb.style.borderColor=''; cb.style.color='';
   document.getElementById('winErr').style.display='none';
   document.getElementById('winScreen').style.display='flex';
   sndWin();
@@ -841,11 +797,6 @@ async function keepGrinding(){
     await GOBINOS_GATE.refreshToken(_sessionToken);
   }
   gamePaused=false; gameRunning=true; startBgMusic(); lastTime=performance.now(); requestAnimationFrame(gameLoop);
-}
-
-// claimSpot kept for any legacy call paths — now routed through checkCapAndClaim→fnPost
-async function claimSpot(){
-  await checkCapAndClaim();
 }
 
 var lbTab='all';
@@ -926,15 +877,6 @@ async function takeSnapshot(){
   }catch(e){ status.textContent='failed: '+e.message; }
 }
 
-async function saveAdminCap(){
-  if(!_adminToken){ alert('not authorised'); return; }
-  var v=parseInt(document.getElementById('adminCap').value)||500; GTD_CAP=v;
-  try{
-    var r=await fetch(FN_BASE+'/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SB_KEY,'x-admin-token':_adminToken},body:JSON.stringify({action:'config',key:'GtdCap',value:String(v)})});
-    if(!r.ok) throw new Error((await r.json()).error||r.status);
-    document.getElementById('adminScreen').style.display='none'; alert('saved! gtd cap = '+v);
-  }catch(e){ alert('failed to save: '+e.message); }
-}
 async function saveAdminScore(){
   if(!_adminToken){ alert('not authorised'); return; }
   var v=parseInt(document.getElementById('adminScore').value)||500; WIN_SCORE=v;
@@ -1082,7 +1024,6 @@ function checkWallet(){
     d.forEach(function(row){
       var val=parseInt(row.value);
       if(row.name==='WinScore'&&val>0){ WIN_SCORE=val; var el=document.getElementById('adminScore'); if(el) el.value=WIN_SCORE; }
-      if(row.name==='GtdCap'&&val>0){ GTD_CAP=val; var el=document.getElementById('adminCap'); if(el) el.value=GTD_CAP; }
       if(row.name==='GameOn'&&row.value==='0'){ window.location.replace('/'); }
     });
   }).catch(function(){});
@@ -1115,11 +1056,11 @@ canvas.style.opacity='1';
 return {
   validateAndStart:validateAndStart, resetToNewGoblin:resetToNewGoblin,
   showLeaderboard:showLeaderboard, restartGame:restartGame, goMenu:goMenu,
-  shareScore:shareScore, checkCapAndClaim:checkCapAndClaim, keepGrinding:keepGrinding,
+  shareScore:shareScore, keepGrinding:keepGrinding,
   resumeGame:resumeGame, toggleMute:toggleMute, adminTap:adminTap,
-  checkAdminPass:checkAdminPass, saveAdminScore:saveAdminScore, saveAdminCap:saveAdminCap,
-  exportWallets:exportWallets, importWallets:importWallets, clearLeaderboard:clearLeaderboard,
-  clearPhase:clearPhase, checkWallet:checkWallet, runSnapshot:runSnapshot,
+  checkAdminPass:checkAdminPass, saveAdminScore:saveAdminScore,
+  clearLeaderboard:clearLeaderboard,
+  checkWallet:checkWallet, runSnapshot:runSnapshot,
   setLbTab:setLbTab, takeSnapshot:takeSnapshot
   // _setWalletAuth intentionally NOT exported — access via one-time bridge below
 };
