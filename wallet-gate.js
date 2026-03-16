@@ -10,8 +10,10 @@ var GOBINOS_GATE = (function () {
   var FN_BASE  = 'https://wlqgibttbggikhdfporr.supabase.co/functions/v1';
   var SB_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
 
-  var _provider = null;
-  var _wallet   = null;
+  var _provider   = null;
+  var _wallet     = null;
+  var _verifying  = false;  // prevents concurrent verifyHolder calls
+  var _authed     = false;  // true once session token issued — skips re-verify on focus
 
   // ── UI state machine ───────────────────────────────────────────────────────
   function showState(id) {
@@ -79,8 +81,10 @@ var GOBINOS_GATE = (function () {
         var newWallet = ethers.getAddress(accounts[0]);
         if (newWallet === _wallet) return; // same wallet — ignore
         // Different wallet — kill session, show gate, re-verify
-        _provider = new ethers.BrowserProvider(window.ethereum);
-        _wallet   = newWallet;
+        _provider  = new ethers.BrowserProvider(window.ethereum);
+        _wallet    = newWallet;
+        _authed    = false;
+        _verifying = false;
         try { localStorage.removeItem('gobWallet'); } catch (e) {}
         showState('wgLoading');
         verifyHolder(_wallet);
@@ -146,6 +150,9 @@ var GOBINOS_GATE = (function () {
 
   // ── On-chain verify + sign + session token ─────────────────────────────────
   async function verifyHolder(wallet) {
+    if (_verifying) return;  // already in progress — ignore duplicate calls
+    if (_authed) return;     // already authenticated — don't re-prompt
+    _verifying = true;
     showState('wgLoading');
     try {
       var contract = new ethers.Contract(CONTRACT, ABI, _provider);
@@ -200,12 +207,15 @@ var GOBINOS_GATE = (function () {
       if (typeof window.__gobSetAuth !== 'function') {
         throw new Error('auth bridge already used or not available — refresh the page');
       }
+      _authed = true;
       window.__gobSetAuth(wallet.toLowerCase(), d.token);
       hideGate();
 
     } catch (e) {
       console.error('[gate] verifyHolder failed:', e.message || e);
       showState('wgConnect');
+    } finally {
+      _verifying = false;
     }
   }
 
@@ -236,8 +246,10 @@ var GOBINOS_GATE = (function () {
         // Older MetaMask versions don't support this — falls back to UI-only disconnect
       }
     }
-    _provider = null;
-    _wallet   = null;
+    _provider  = null;
+    _wallet    = null;
+    _authed    = false;
+    _verifying = false;
     try { localStorage.removeItem('gobWallet'); } catch (e) {}
     showState('wgConnect');
   }
