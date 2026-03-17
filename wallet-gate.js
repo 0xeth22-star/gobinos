@@ -146,18 +146,20 @@ var GOBINOS_GATE = (function () {
 
   // ── On-chain verify + sign + session token ─────────────────────────────────
   async function verifyHolder(wallet) {
-    if (_verifying) return;
-    if (_authed) return;
-    _verifying = true;
-    showState('wgLoading');
-    try {
-      var contract = new ethers.Contract(CONTRACT, ABI, _provider);
-      var balance  = await contract.balanceOf(wallet);
-
-      if (false && balance < 1n) {
-
-
-      var signer = await _provider.getSigner();
+      if (_verifying) return;
+      if (_authed) return;
+      _verifying = true;
+      showState('wgLoading');
+      try {
+        var contract = new ethers.Contract(CONTRACT, ABI, _provider);
+        var balance  = await contract.balanceOf(wallet);
+  
+        if (balance < 1n) {         
+          showState('wgNotHolder');  
+          return;                    
+        }
+  
+        var signer = await _provider.getSigner();
       var nonce  = crypto.randomUUID();
       var msg    = 'Gobinos: verify wallet ownership.\nNonce: ' + nonce;
 
