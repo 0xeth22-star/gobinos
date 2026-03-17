@@ -388,7 +388,7 @@ function shoot(isAuto){
   if(!isAuto && !_recordShot(now)) return;
   _lastShot=now;
   sndShoot();
-  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(11+wave*0.12),r:5,dead:false,trail:[]});
+  projectiles.push({x:GOBLIN_X,y:GOBLIN_Y-GH*0.08,vy:-(18+wave*0.18),r:5,dead:false,trail:[]});
 }
 
 function drawBG(){
@@ -654,18 +654,18 @@ function gameLoop(ts){
   if(!gameRunning) return;
   var dt=Math.min((ts-lastTime)/1000,0.05); lastTime=ts;
   goblinAnim+=dt*3; if(hitFlash>0) hitFlash-=dt;
-  var spd=GW*0.32*dt;
+  var spd=GW*0.52*dt;
   if(keys['ArrowLeft']||keys['a']) GOBLIN_X=clampGoblin(GOBLIN_X-spd);
   if(keys['ArrowRight']||keys['d']) GOBLIN_X=clampGoblin(GOBLIN_X+spd);
   if(keys[' ']){ if(!keys._sw) shoot(false); keys._sw=true; } else keys._sw=false;
-  if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.08,0.3-(wave-1)*0.01); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
+  if(touchHeld){ _lastRealInput=Date.now(); autoShootTimer+=dt; var shootRate=Math.max(0.06,0.22-(wave-1)*0.008); if(autoShootTimer>=shootRate){ autoShootTimer=0; shoot(true); } } else { autoShootTimer=0; }
   // ── Rapid fire timer decay
   if(rapidFireTimer>0) rapidFireTimer-=dt;
 
   // ── Spawn logic (boss wave vs normal)
   var isBossWave=(BOSS_WAVE_INTERVAL>0 && wave%BOSS_WAVE_INTERVAL===0);
   spawnTimer+=dt;
-  var rate=Math.max(1.0,2.8-wave*0.07);
+  var rate=Math.max(0.7,2.2-wave*0.07);
   if(spawnTimer>=rate){
     spawnTimer=0;
     if(isBossWave){
@@ -673,7 +673,7 @@ function gameLoop(ts){
       if(!_bossWaveSpawned){
         _bossWaveSpawned=true;
         var br=54; // 3× ape base radius (18)
-        enemies.push({x:LANE_X+LANE_W/2,y:-br,type:'boss',r:br,spd:0.28+wave*0.006,baseSpd:0.28,wobble:0,zz:0,hp:BOSS_HP,maxHp:BOSS_HP,pts:10,flash:0,dead:false,burst:false,burstAt:null});
+        enemies.push({x:LANE_X+LANE_W/2,y:-br,type:'boss',r:br,spd:0.55+wave*0.012,baseSpd:0.55,wobble:0,zz:0,hp:BOSS_HP,maxHp:BOSS_HP,pts:10,flash:0,dead:false,burst:false,burstAt:null});
       }
     } else {
       var n=Math.min(Math.floor(wave/8)+1,2);
@@ -683,9 +683,9 @@ function gameLoop(ts){
         if(wave>=12 && roll<0.18) type='ape';
         else if(wave>=5 && roll<0.28) type='punk';
         var cfg={
-          mosquito:{r:10+Math.random()*5,spd:0.7+wave*0.025+Math.random()*0.12,hp:1,pts:1},
-          punk:{r:7+Math.random()*3,spd:0.9+wave*0.028+Math.random()*0.14,hp:1,pts:2},
-          ape:{r:17+Math.random()*4,spd:0.45+wave*0.018+Math.random()*0.1,hp:3,pts:3}
+          mosquito:{r:10+Math.random()*5,spd:1.2+wave*0.04+Math.random()*0.2,hp:1,pts:1},
+          punk:{r:7+Math.random()*3,spd:1.5+wave*0.045+Math.random()*0.22,hp:1,pts:2},
+          ape:{r:17+Math.random()*4,spd:0.75+wave*0.03+Math.random()*0.15,hp:3,pts:3}
         }[type];
         enemies.push({x:LANE_X+Math.random()*LANE_W,y:-18,type:type,r:cfg.r,spd:cfg.spd,baseSpd:cfg.spd,wobble:Math.random()*Math.PI*2,zz:Math.random()*Math.PI*2,hp:cfg.hp,maxHp:cfg.hp,pts:cfg.pts,flash:0,dead:false,burst:false,burstAt:null});
       }
@@ -705,7 +705,7 @@ function gameLoop(ts){
   for(var i=0;i<enemies.length;i++){ var e=enemies[i];
     e.y+=e.spd; e.wobble+=0.11;
     if(e.type==='punk'){ e.zz+=0.10; e.x+=Math.sin(e.zz)*0.9; }
-    else if(e.type==='boss'){ e.x+=Math.sin(e.wobble*0.5)*0.6; }
+    else if(e.type==='boss'){ e.x+=Math.sin(e.wobble*0.5)*1.8; }
     else { e.x+=Math.sin(e.wobble)*0.35; }
     e.x=Math.max(LANE_X+e.r,Math.min(LANE_X+LANE_W-e.r,e.x)); if(e.flash>0) e.flash-=dt; }
   // ── Projectile movement
