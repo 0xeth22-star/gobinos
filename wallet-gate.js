@@ -151,7 +151,6 @@ var GOBINOS_GATE = (function () {
   // ── On-chain verify + sign + session token ─────────────────────────────────
   async function verifyHolder(wallet) {
     if (_verifying) return;
-    if (_authed) return;
     _verifying = true;
     showState('wgLoading');
     try {
