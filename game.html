@@ -174,20 +174,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050a03;display:flex
         <div class="admin-label">LEADERBOARD</div>
         <button class="o-btn red" onclick="_gob.clearLeaderboard()" style="font-size:.7rem;padding:9px;margin-top:6px;">wipe leaderboard</button>
       </div>
-      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
-        <div class="admin-label">SNAPSHOT</div>
-        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">top 50 → snapshot + tweet copy</div>
-        <button class="o-btn" onclick="_gob.runSnapshot()" style="font-size:.7rem;padding:9px;margin-top:6px;border-color:rgba(74,222,128,0.5);">run snapshot</button>
-        <div id="snapshotStatus" style="font-size:.45rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
-        <textarea id="snapshotTweet" style="display:none;width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(74,222,128,.3);border-radius:4px;padding:8px;color:#e8dcc8;font-family:'Space Mono',monospace;font-size:.58rem;height:120px;outline:none;resize:none;margin-top:8px;"></textarea>
-      </div>
-      <div style="border-top:1px solid rgba(74,222,128,.1);padding-top:14px;margin-top:8px;">
-        <div class="admin-label">OG SNAPSHOT</div>
-        <div style="font-size:.42rem;color:rgba(232,220,200,.3);letter-spacing:1px;margin-bottom:6px;">pulls top 50 from leaderboard → writes to snapshot</div>
-        <button class="o-btn" onclick="_gob.takeSnapshot()" style="font-size:.7rem;padding:9px;margin-top:4px;background:rgba(20,60,20,0.8);border-color:rgba(74,222,128,0.4);">take snapshot</button>
-        <div id="ogSnapshotStatus" style="font-size:.48rem;color:rgba(74,222,128,.5);letter-spacing:1px;margin-top:6px;display:none;"></div>
-        <div id="snapshotList" style="margin-top:10px;max-height:160px;overflow-y:auto;display:none;"></div>
-      </div>
+
       <button class="o-btn" onclick="document.getElementById('adminScreen').style.display='none'" style="font-size:.75rem;padding:10px;margin-top:12px;background:transparent;">close</button>
     </div>
   </div>
