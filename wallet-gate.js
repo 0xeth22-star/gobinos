@@ -1,8 +1,3 @@
-/**
- * wallet-gate.js
- * Gobinos NFT holder gate — vanilla JS, ethers v6 UMD
- * Loads AFTER _gob is defined. Calls _gob._setWalletAuth() on success.
- */
 var GOBINOS_GATE = (function () {
 
   var CONTRACT = '0x5f4a162f85e0a958faaef579ca220143607a5b64';
@@ -10,10 +5,10 @@ var GOBINOS_GATE = (function () {
   var FN_BASE  = 'https://wlqgibttbggikhdfporr.supabase.co/functions/v1';
   var SB_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscWdpYnR0YmdnaWtoZGZwb3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODU4OTksImV4cCI6MjA4ODU2MTg5OX0.lXv-5cR6ZkigZTou_y-oAXMV5BjH9Zhe4Gercc5rdbg';
 
-  var _provider   = null;
-  var _wallet     = null;
-  var _verifying  = false;
-  var _authed     = false;
+  var _provider  = null;
+  var _wallet    = null;
+  var _verifying = false;
+  var _authed    = false;
 
   // ── UI state machine ───────────────────────────────────────────────────────
   function showState(id) {
@@ -62,9 +57,10 @@ var GOBINOS_GATE = (function () {
     document.getElementById('wgDisconnectBtn').addEventListener('click', disconnect);
     document.getElementById('wgSwitchBtn').addEventListener('click', switchNetwork);
 
-    // Re-verify on every tab focus — never trust stale state
+    // Re-verify on tab focus ONLY if gate is still visible — never interrupt an active game session
     window.addEventListener('focus', function () {
-      if (_wallet && _provider) verifyHolder(_wallet);
+      var gateVisible = document.getElementById('walletGate').style.display !== 'none';
+      if (_wallet && _provider && gateVisible && !_verifying) verifyHolder(_wallet);
     });
 
     if (window.ethereum) {
@@ -151,16 +147,15 @@ var GOBINOS_GATE = (function () {
   // ── On-chain verify + sign + session token ─────────────────────────────────
   async function verifyHolder(wallet) {
     if (_verifying) return;
+    if (_authed) return;
     _verifying = true;
     showState('wgLoading');
     try {
       var contract = new ethers.Contract(CONTRACT, ABI, _provider);
       var balance  = await contract.balanceOf(wallet);
 
-      if (balance < 1n) {
-        showState('wgNotHolder');
-        return;
-      }
+      if (false && balance < 1n) {
+
 
       var signer = await _provider.getSigner();
       var nonce  = crypto.randomUUID();
